@@ -9,7 +9,7 @@ from typing import Any, Callable, Optional
 
 from fastapi import HTTPException
 
-from app.models import ButtonPress, EventRecord
+from app.models import AnswerRecord, ButtonPress, EventRecord, PressRecord, QuestionRecord
 from app.state import app_state
 from app.websocket_manager import ws_manager
 
@@ -93,8 +93,6 @@ class GameEngine:
         if app_state.game_status() not in {"game_running", "question_finished"}:
             raise HTTPException(status_code=400, detail="La partida no esta iniciada")
 
-        self._assert_assigned_controls_online()
-
         question = app_state.start_next_question()
         if question is None:
             return await self.end_game(message="Partida finalizada: no hay mas preguntas")
@@ -126,8 +124,6 @@ class GameEngine:
     async def start_question_timer(self) -> dict:
         if app_state.game_status() != "question_ready":
             raise HTTPException(status_code=400, detail="No hay una pregunta lista para iniciar temporizador")
-
-        self._assert_assigned_controls_online()
 
         current_question = app_state.current_question()
         if current_question is None:
@@ -206,7 +202,6 @@ class GameEngine:
         if app_state.game_status() != "game_paused":
             raise HTTPException(status_code=400, detail="La partida no esta pausada")
 
-        self._assert_assigned_controls_online()
         restored_status = app_state.resume_game()
 
         current_question = app_state.current_question()
@@ -253,6 +248,42 @@ class GameEngine:
         app_state.finish_question()
         await self._cancel_timer()
 
+        press_elapsed = 0.0
+        press_queue = app_state.press_queue()
+        if press_queue:
+            for press in press_queue:
+                if press.team_id == current_team.team_id:
+                    press_elapsed = press.elapsed_time
+                    break
+
+        app_state.add_answer_record(AnswerRecord(
+            question_id=current_question.question_id,
+            question_text=current_question.text,
+            team_id=current_team.team_id,
+            team_name=current_team.name,
+            control_id=current_team.control_id,
+            result="correct",
+            points_awarded=points_to_add,
+            elapsed_time=press_elapsed,
+            timestamp=datetime.now(timezone.utc)
+        ))
+
+        app_state.add_question_record(QuestionRecord(
+            question_id=current_question.question_id,
+            question_text=current_question.text,
+            correct_answer=current_question.correct_answer,
+            points=current_question.points,
+            category=current_question.category,
+            difficulty=current_question.difficulty,
+            started_at=app_state.question_started_at(),
+            finished_at=datetime.now(timezone.utc),
+            attempts=len(press_queue) + 1,
+            final_result="correct",
+            answered_by_team_id=current_team.team_id,
+            answered_by_team_name=current_team.name,
+            points_awarded=points_to_add
+        ))
+
         if updated_team is not None:
             self._send_led(updated_team.control_id, "on")
         await self._send_led_all_assigned("on")
@@ -298,6 +329,25 @@ class GameEngine:
         app_state.apply_incorrect_answer(current_team.team_id)
         app_state.block_team_current_question(current_team.team_id)
 
+        press_elapsed = 0.0
+        press_queue = app_state.press_queue()
+        for press in press_queue:
+            if press.team_id == current_team.team_id:
+                press_elapsed = press.elapsed_time
+                break
+
+        app_state.add_answer_record(AnswerRecord(
+            question_id=current_question.question_id,
+            question_text=current_question.text,
+            team_id=current_team.team_id,
+            team_name=current_team.name,
+            control_id=current_team.control_id,
+            result="incorrect",
+            points_awarded=0,
+            elapsed_time=press_elapsed,
+            timestamp=datetime.now(timezone.utc)
+        ))
+
         next_team = app_state.next_team_from_queue()
         if next_team is not None:
             app_state.set_waiting_for_answer()
@@ -326,6 +376,22 @@ class GameEngine:
         await self._cancel_timer()
         await self._send_led_all_assigned("on")
         app_state.reveal_correct_answer(current_question.correct_answer)
+
+        app_state.add_question_record(QuestionRecord(
+            question_id=current_question.question_id,
+            question_text=current_question.text,
+            correct_answer=current_question.correct_answer,
+            points=current_question.points,
+            category=current_question.category,
+            difficulty=current_question.difficulty,
+            started_at=app_state.question_started_at(),
+            finished_at=datetime.now(timezone.utc),
+            attempts=len(press_queue),
+            final_result="no_correct_answer",
+            answered_by_team_id=None,
+            answered_by_team_name=None,
+            points_awarded=0
+        ))
 
         event = EventRecord(
             timestamp=datetime.now(timezone.utc),
@@ -371,6 +437,7 @@ class GameEngine:
 
     async def end_game(self, message: str = "Partida finalizada") -> dict:
         app_state.finish_game()
+        final_ranking = app_state.finalize_game()
         await self._cancel_timer()
         await self._send_led_all_assigned("blink_slow")
 
@@ -379,7 +446,7 @@ class GameEngine:
             device_id="server",
             event_type="game_finished",
             topic="internal/game/end",
-            payload={"ranking": app_state.game_runtime_snapshot()["scores"]},
+            payload={"ranking": [r.model_dump() for r in final_ranking]},
             message=message,
         )
         app_state.add_event(event)
@@ -388,7 +455,7 @@ class GameEngine:
             "success": True,
             "message": message,
             "game_status": app_state.game_status(),
-            "ranking": app_state.game_runtime_snapshot()["scores"],
+            "ranking": [r.model_dump() for r in final_ranking],
         }
 
     def handle_button_press(self, device_id: str, topic: str, payload: dict[str, Any]) -> EventRecord:
@@ -487,6 +554,18 @@ class GameEngine:
         app_state.set_waiting_for_answer()
         self._send_led(device_id, "blink_fast")
 
+        press_order = len(app_state.press_history()) + 1
+        app_state.add_press_record(PressRecord(
+            question_id=current_question.question_id,
+            question_text=current_question.text,
+            team_id=team.team_id,
+            team_name=team.name,
+            control_id=device_id,
+            elapsed_time=round(elapsed_time, 2),
+            press_order=press_order,
+            timestamp=datetime.now(timezone.utc)
+        ))
+
         return EventRecord(
             timestamp=datetime.now(timezone.utc),
             device_id=device_id,
@@ -506,24 +585,29 @@ class GameEngine:
         await ws_manager.broadcast_json({"type": "game_state_updated", "data": app_state.game_runtime_snapshot()})
 
     async def _run_question_timer(self, question_id: str, initial_seconds: int) -> None:
-        remaining = max(0, int(initial_seconds))
-        app_state.set_question_remaining_time(remaining)
-        await self.broadcast_state()
-
-        while remaining > 0:
-            await asyncio.sleep(1)
-            status = app_state.game_status()
-            current_question = app_state.current_question()
-            if status != "question_active":
-                return
-            if current_question is None or current_question.question_id != question_id:
-                return
-
-            remaining -= 1
+        try:
+            remaining = max(0, int(initial_seconds))
             app_state.set_question_remaining_time(remaining)
             await self.broadcast_state()
 
-        await self._handle_time_expired(question_id)
+            while remaining > 0:
+                await asyncio.sleep(1)
+                status = app_state.game_status()
+                current_question = app_state.current_question()
+                if status != "question_active":
+                    return
+                if current_question is None or current_question.question_id != question_id:
+                    return
+
+                remaining -= 1
+                app_state.set_question_remaining_time(remaining)
+                await self.broadcast_state()
+
+            await self._handle_time_expired(question_id)
+        except asyncio.CancelledError:
+            pass
+        except Exception as e:
+            print(f"[TIMER ERROR] {e}")
 
     async def _handle_time_expired(self, question_id: str) -> None:
         current_question = app_state.current_question()
@@ -552,6 +636,7 @@ class GameEngine:
                 await self._broadcast_event_and_state(event)
                 return
 
+            app_state.reveal_correct_answer(current_question.correct_answer)
             app_state.finish_question()
             await self._send_led_all_assigned("on")
             event = EventRecord(
@@ -559,8 +644,8 @@ class GameEngine:
                 device_id="server",
                 event_type="question_timeout_no_answers",
                 topic="internal/game/timer",
-                payload={"question_id": question_id},
-                message="Tiempo agotado. Pregunta finalizada sin respuesta",
+                payload={"question_id": question_id, "correct_answer": current_question.correct_answer},
+                message=f"Tiempo agotado. Respuesta correcta: {current_question.correct_answer}",
             )
             app_state.add_event(event)
             await self._broadcast_event_and_state(event)

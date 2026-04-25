@@ -82,3 +82,54 @@ class LedCommandRequest(BaseModel):
     mode: Literal["on", "off", "blink_slow", "blink_fast"] = Field(
         description="LED mode to send to a control"
     )
+
+
+class PressRecord(BaseModel):
+    question_id: str
+    question_text: str
+    team_id: str
+    team_name: str
+    control_id: str
+    elapsed_time: float
+    press_order: int
+    timestamp: datetime
+
+
+class AnswerRecord(BaseModel):
+    question_id: str
+    question_text: str
+    team_id: str
+    team_name: str
+    control_id: str
+    result: Literal["correct", "incorrect"]
+    points_awarded: int
+    elapsed_time: float
+    timestamp: datetime
+
+
+class QuestionRecord(BaseModel):
+    question_id: str
+    question_text: str
+    correct_answer: str
+    points: int
+    category: Optional[str] = None
+    difficulty: Optional[str] = None
+    started_at: datetime
+    finished_at: Optional[datetime] = None
+    attempts: int = 0
+    final_result: Optional[str] = None
+    answered_by_team_id: Optional[str] = None
+    answered_by_team_name: Optional[str] = None
+    points_awarded: int = 0
+
+
+class TeamResult(BaseModel):
+    position: int
+    team_id: str
+    team_name: str
+    control_id: str
+    score: int
+    correct_answers: int
+    incorrect_answers: int
+    total_presses: int
+    average_press_time: float

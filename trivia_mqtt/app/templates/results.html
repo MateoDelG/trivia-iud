@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>TriviaMQTT - Resultados</title>
+    <link rel="stylesheet" href="/static/css/theme.css" />
+    <style>
+      .results-page { max-width: 1200px; margin: 0 auto; padding: 24px; }
+      .results-header { margin-bottom: 32px; }
+      .results-header h1 { font-size: 2rem; margin-bottom: 8px; }
+      .results-header p { color: var(--text-muted); }
+      .card-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; margin-bottom: 32px; }
+      .stat-card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 20px; }
+      .stat-card h3 { font-size: 0.875rem; color: var(--text-muted); margin-bottom: 8px; }
+      .stat-card .value { font-size: 2rem; font-weight: 700; color: var(--primary); }
+      .stat-card .unit { font-size: 0.875rem; color: var(--text-muted); }
+      .section-title { font-size: 1.25rem; margin-bottom: 16px; }
+      .data-table { width: 100%; border-collapse: collapse; background: var(--surface); border-radius: 8px; overflow: hidden; }
+      .data-table th, .data-table td { padding: 12px 16px; text-align: left; border-bottom: 1px solid var(--border); }
+      .data-table th { background: var(--bg-subtle); font-weight: 600; font-size: 0.875rem; }
+      .data-table tr:last-child td { border-bottom: none; }
+      .position-badge { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 50%; background: var(--primary); color: white; font-weight: 700; font-size: 0.875rem; }
+      .position-badge.gold { background: linear-gradient(135deg, #FFD700, #FFA500); }
+      .position-badge.silver { background: linear-gradient(135deg, #C0C0C0, #A0A0A0); }
+      .position-badge.bronze { background: linear-gradient(135deg, #CD7F32, #8B4513); }
+      .export-buttons { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 24px; padding-top: 24px; border-top: 1px solid var(--border); }
+      .loading { text-align: center; padding: 48px; color: var(--text-muted); }
+    </style>
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="topbar">
+        <div class="brand">TriviaMQTT</div>
+        <nav class="nav-links">
+          <a href="/setup">Configuracion</a>
+          <a href="/host">Host</a>
+          <a href="/display">Display</a>
+          <a href="/results" class="active">Resultados</a>
+        </nav>
+      </header>
+    </div>
+
+    <main class="results-page">
+      <section class="results-header">
+        <h1>Resultados de la Partida</h1>
+        <p id="game-name">Cargando...</p>
+      </section>
+
+      <div id="loading" class="loading">Cargando resultados...</div>
+
+      <div id="results-content" style="display: none;">
+        <section class="card-grid">
+          <div class="stat-card">
+            <h3>Equipo Ganador</h3>
+            <div class="value" id="winner-name">-</div>
+          </div>
+          <div class="stat-card">
+            <h3>Puntaje Maximo</h3>
+            <div class="value" id="max-score">0 <span class="unit">pts</span></div>
+          </div>
+          <div class="stat-card">
+            <h3>Preguntas Jugadas</h3>
+            <div class="value" id="total-questions">0</div>
+          </div>
+          <div class="stat-card">
+            <h3>Total Pulsaciones</h3>
+            <div class="value" id="total-presses">0</div>
+          </div>
+        </section>
+
+        <section>
+          <h2 class="section-title">Ranking Final</h2>
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Posicion</th>
+                <th>Equipo</th>
+                <th>Puntaje</th>
+                <th>Correctas</th>
+                <th>Incorrectas</th>
+                <th>Pulsaciones</th>
+                <th>Tiempo Promedio</th>
+              </tr>
+            </thead>
+            <tbody id="ranking-table"></tbody>
+          </table>
+        </section>
+
+        <section style="margin-top: 32px;">
+          <h2 class="section-title">Historial de Preguntas</h2>
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Pregunta</th>
+                <th>Respuesta</th>
+                <th>Puntos</th>
+                <th>Resultado</th>
+                <th>Equipo</th>
+              </tr>
+            </thead>
+            <tbody id="questions-table"></tbody>
+          </table>
+        </section>
+
+        <section style="margin-top: 32px;">
+          <h2 class="section-title">Historial de Respuestas</h2>
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Pregunta</th>
+                <th>Equipo</th>
+                <th>Resultado</th>
+                <th>Puntos</th>
+                <th>Tiempo</th>
+              </tr>
+            </thead>
+            <tbody id="answers-table"></tbody>
+          </table>
+        </section>
+
+        <section class="export-buttons">
+          <h3 class="section-title">Exportar CSV</h3>
+          <a href="/api/results/export/summary.csv" class="btn btn-secondary" download>Resumen</a>
+          <a href="/api/results/export/questions.csv" class="btn btn-secondary" download>Preguntas</a>
+          <a href="/api/results/export/answers.csv" class="btn btn-secondary" download>Respuestas</a>
+          <a href="/api/results/export/presses.csv" class="btn btn-secondary" download>Pulsaciones</a>
+          <a href="/api/results/export/events.csv" class="btn btn-secondary" download>Eventos</a>
+        </section>
+      </div>
+    </main>
+
+    <script src="/static/js/results.js"></script>
+  </body>
+</html>

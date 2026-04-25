@@ -7,7 +7,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from fastapi import FastAPI, File, HTTPException, Request, UploadFile, WebSocket, WebSocketDisconnect
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
@@ -82,8 +82,13 @@ async def setup_view(request: Request) -> HTMLResponse:
 
 
 @app.get("/display", response_class=HTMLResponse)
-async def display_view(request: Request) -> HTMLResponse:
+async def display_page(request: Request):
     return templates.TemplateResponse("display.html", {"request": request})
+
+
+@app.get("/results", response_class=HTMLResponse)
+async def results_page(request: Request):
+    return templates.TemplateResponse("results.html", {"request": request})
 
 
 @app.get("/api/controls")
@@ -445,3 +450,146 @@ async def websocket_endpoint(websocket: WebSocket) -> None:
             await websocket.receive_text()
     except WebSocketDisconnect:
         ws_manager.disconnect(websocket)
+
+
+@app.get("/api/results")
+async def get_all_results():
+    ranking = app_state.finalize_game() if app_state.game_status() == "game_finished" else []
+    questions = app_state.question_history()
+    answers = app_state.answer_history()
+    presses = app_state.press_history()
+    events = app_state.events()
+    
+    return {
+        "game_name": app_state.game_config().game_name if app_state.game_config() else None,
+        "game_started_at": app_state.game_started_at().isoformat() if app_state.game_started_at() else None,
+        "game_finished_at": app_state.game_finished_at().isoformat() if app_state.game_finished_at() else None,
+        "game_status": app_state.game_status(),
+        "final_ranking": [r.model_dump() for r in ranking],
+        "questions": {
+            "total": len(questions),
+            "items": [q.model_dump() for q in questions],
+        },
+        "answers": {
+            "total": len(answers),
+            "items": [a.model_dump() for a in answers],
+        },
+        "presses": {
+            "total": len(presses),
+            "items": [p.model_dump() for p in presses],
+        },
+        "events": {
+            "total": len(events),
+            "items": [e.model_dump() for e in events],
+        },
+    }
+
+
+@app.get("/api/results/summary")
+async def get_results_summary():
+    if app_state.game_status() != "game_finished":
+        return {
+            "game_name": app_state.game_config().game_name if app_state.game_config() else None,
+            "game_started_at": app_state.game_started_at().isoformat() if app_state.game_started_at() else None,
+            "game_finished_at": app_state.game_finished_at().isoformat() if app_state.game_finished_at() else None,
+            "final_ranking": [],
+        }
+    final_ranking = app_state.finalize_game()
+    return {
+        "game_name": app_state.game_config().game_name if app_state.game_config() else None,
+        "game_started_at": app_state.game_started_at().isoformat() if app_state.game_started_at() else None,
+        "game_finished_at": app_state.game_finished_at().isoformat() if app_state.game_finished_at() else None,
+        "final_ranking": [r.model_dump() for r in final_ranking],
+    }
+
+
+@app.get("/api/results/questions")
+async def get_results_questions():
+    history = app_state.question_history()
+    return {
+        "total_questions": len(history),
+        "questions": [q.model_dump() for q in history],
+    }
+
+
+@app.get("/api/results/answers")
+async def get_results_answers():
+    history = app_state.answer_history()
+    return {
+        "total_answers": len(history),
+        "answers": [a.model_dump() for a in history],
+    }
+
+
+@app.get("/api/results/presses")
+async def get_results_presses():
+    history = app_state.press_history()
+    return {
+        "total_presses": len(history),
+        "presses": [p.model_dump() for p in history],
+    }
+
+
+@app.get("/api/results/events")
+async def get_results_events():
+    events = app_state.events()
+    return {
+        "total_events": len(events),
+        "events": [e.model_dump() for e in events],
+    }
+
+
+def _build_csv_response(rows: list[dict], filename: str) -> StreamingResponse:
+    if not rows:
+        csv_content = "No data available"
+    else:
+        headers = list(rows[0].keys())
+        csv_lines = [",".join(headers)]
+        for row in rows:
+            values = [str(row.get(h, "")) for h in headers]
+            csv_lines.append(",".join(values))
+        csv_content = "\n".join(csv_lines)
+
+    async def iter_csv():
+        yield csv_content
+
+    return StreamingResponse(
+        iter_csv(),
+        media_type="text/csv",
+        headers={"Content-Disposition": f"attachment; filename={filename}"},
+    )
+
+
+@app.get("/api/results/export/summary.csv")
+async def export_summary_csv():
+    ranking = app_state.finalize_game() if app_state.game_status() == "game_finished" else []
+    rows = [r.model_dump() for r in ranking]
+    return _build_csv_response(rows, "trivia_summary.csv")
+
+
+@app.get("/api/results/export/questions.csv")
+async def export_questions_csv():
+    questions = app_state.question_history()
+    rows = [q.model_dump() for q in questions]
+    return _build_csv_response(rows, "trivia_questions.csv")
+
+
+@app.get("/api/results/export/answers.csv")
+async def export_answers_csv():
+    answers = app_state.answer_history()
+    rows = [a.model_dump() for a in answers]
+    return _build_csv_response(rows, "trivia_answers.csv")
+
+
+@app.get("/api/results/export/presses.csv")
+async def export_presses_csv():
+    presses = app_state.press_history()
+    rows = [p.model_dump() for p in presses]
+    return _build_csv_response(rows, "trivia_presses.csv")
+
+
+@app.get("/api/results/export/events.csv")
+async def export_events_csv():
+    events = app_state.events()
+    rows = [e.model_dump() for e in events]
+    return _build_csv_response(rows, "trivia_events.csv")

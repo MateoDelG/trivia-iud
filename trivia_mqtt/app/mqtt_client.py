@@ -64,6 +64,12 @@ class MQTTClientService:
             status = str(payload.get("status", "unknown"))
             if status.lower() == "offline":
                 app_state.remove_control(device_id=device_id)
+                current_game_status = app_state.game_status()
+                if current_game_status in {"question_ready", "question_active", "waiting_for_answer"}:
+                    teams = app_state.teams()
+                    assigned_controls = {team.control_id for team in teams}
+                    if device_id in assigned_controls:
+                        self._notify_pause_due_disconnection(device_id)
             else:
                 app_state.upsert_control_status(device_id=device_id, status=status)
             event = EventRecord(
@@ -76,8 +82,6 @@ class MQTTClientService:
             app_state.add_event(event)
             self._notify_controls_updated()
             self._notify_event_received(event.model_dump(mode="json"))
-            if status.lower() == "offline" and app_state.game_status() == "question_active":
-                self._notify_pause_due_disconnection(device_id)
             return
 
         if topic.endswith("/button"):

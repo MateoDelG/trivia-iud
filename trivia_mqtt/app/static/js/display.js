@@ -14,8 +14,27 @@ let gameState = null;
 let popupTimeout = null;
 let lastPopupQuestionId = null;
 let pausePopupVisible = false;
+const controlPrevStatus = new Map();
 
-function showPopup(message, type = "info", persistent = false) {
+function maybeShowControlDisconnectPopup(eventData) {
+  if (!eventData || eventData.event_type !== "status_update") return;
+  const status = String(eventData.payload?.status || "").toLowerCase();
+  if (status !== "offline") return;
+
+  const gameStatus = gameState?.game_status || "setup";
+  if (!["question_ready", "question_active", "waiting_for_answer"].includes(gameStatus)) return;
+
+  const deviceId = eventData.device_id || eventData.payload?.device_id || "control";
+  const prevStatus = controlPrevStatus.get(deviceId);
+  if (prevStatus !== "online") return;
+
+  const team = (gameState?.teams || []).find((item) => item.control_id === deviceId);
+  const teamSuffix = team ? ` (${team.name})` : "";
+  showPopup(`Control desconectado: ${deviceId}${teamSuffix}`, "error", true);
+  controlPrevStatus.set(deviceId, "offline");
+}
+
+function showPopup(message, type = "info", persistent = false, durationMs = 3200) {
   if (!popupEl || !popupContentEl) return;
   popupContentEl.textContent = message;
   popupContentEl.className = `display-popup-content ${type}`;
@@ -32,7 +51,7 @@ function showPopup(message, type = "info", persistent = false) {
   pausePopupVisible = false;
   popupTimeout = window.setTimeout(() => {
     popupEl.classList.add("hidden");
-  }, 3200);
+  }, durationMs);
 }
 
 function hidePopup() {
@@ -48,11 +67,38 @@ function hidePopup() {
 function maybeShowEventPopup(eventData) {
   if (!eventData) return;
 
+  const GAME_STATUS_ACTIVE = ["question_active", "waiting_for_answer"];
+
+  if (eventData.event_type === "button_pressed") {
+    if (!GAME_STATUS_ACTIVE.includes(gameState?.game_status)) return;
+    const teamName = eventData.team_name || eventData.payload?.team_name || "Equipo";
+    showPopup(`Equipo activo: ${teamName}`, "info", false, 10000);
+    return;
+  }
+
+  if (eventData.event_type === "answer_correct") {
+    const teamName = eventData.team_name || "Equipo";
+    showPopup(`Correcta! ${teamName}`, "success", false, 10000);
+    return;
+  }
+
+  if (eventData.event_type === "question_timeout_no_answers") {
+    const correctAnswer = eventData.payload?.correct_answer || eventData.message?.match(/[ABCD]$/)?.[0] || "-";
+    showPopup(`Tiempo agotado. Respuesta correcta: ${correctAnswer}`, "error", true);
+    return;
+  }
+
   if (eventData.event_type === "answer_incorrect_next_team") {
     const nextTeamId = eventData.payload?.next_team;
     const nextTeam = (gameState?.teams || []).find((team) => team.team_id === nextTeamId);
     const nextTeamName = nextTeam?.name || "Siguiente equipo";
-    showPopup(`Respuesta incorrecta. Responde: ${nextTeamName}`, "warning");
+    showPopup(`Respuesta incorrecta. Responde: ${nextTeamName}`, "warning", false, 10000);
+    return;
+  }
+
+  if (eventData.event_type === "answer_incorrect_no_more_teams") {
+    showPopup("Sin más equipos", "warning", false, 10000);
+    return;
   }
 }
 
@@ -174,6 +220,8 @@ function renderState() {
   if (gameState.game_status === "game_paused") {
     const pauseReason = gameState.game_pause_reason || "Partida pausada";
     showPopup(`Partida pausada: ${pauseReason}`, "warning", true);
+  } else if (gameState.game_status === "game_finished") {
+    showPopup("Partida finalizada", "success", true);
   } else if (pausePopupVisible) {
     hidePopup();
   }
@@ -214,6 +262,7 @@ function connectWebSocket() {
 
     if (message.type === "event_received") {
       maybeShowEventPopup(message.data || null);
+      maybeShowControlDisconnectPopup(message.data || null);
     }
   };
 

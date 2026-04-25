@@ -6,7 +6,18 @@ from threading import Lock
 from typing import Dict, List, Optional
 
 from app.config import CONTROL_STALE_SECONDS, MAX_EVENTS
-from app.models import ButtonPress, ControlState, EventRecord, GameConfig, Question, Team
+from app.models import (
+    AnswerRecord,
+    ButtonPress,
+    ControlState,
+    EventRecord,
+    GameConfig,
+    PressRecord,
+    Question,
+    QuestionRecord,
+    Team,
+    TeamResult,
+)
 
 
 class AppState:
@@ -37,6 +48,12 @@ class AppState:
         self._revealed_correct_answer: Optional[str] = None
         self._game_pause_reason: Optional[str] = None
         self._paused_from_status: Optional[str] = None
+
+        self._press_history: List[PressRecord] = []
+        self._answer_history: List[AnswerRecord] = []
+        self._question_history: List[QuestionRecord] = []
+        self._game_started_at: Optional[datetime] = None
+        self._game_finished_at: Optional[datetime] = None
 
     @staticmethod
     def _now() -> datetime:
@@ -204,6 +221,11 @@ class AppState:
             self._game_status = "game_running"
             self._answer_revealed = False
             self._revealed_correct_answer = None
+            self._game_started_at = self._now()
+            self._game_finished_at = None
+            self._press_history = []
+            self._answer_history = []
+            self._question_history = []
             if self._game_config is not None:
                 self._game_config = self._game_config.model_copy(update={"status": "game_running"})
                 reset_teams = [
@@ -497,6 +519,87 @@ class AppState:
         self._revealed_correct_answer = None
         self._game_pause_reason = None
         self._paused_from_status = None
+
+    def add_press_record(self, record: PressRecord) -> None:
+        with self._lock:
+            self._press_history.append(record)
+
+    def add_answer_record(self, record: AnswerRecord) -> None:
+        with self._lock:
+            self._answer_history.append(record)
+
+    def add_question_record(self, record: QuestionRecord) -> None:
+        with self._lock:
+            self._question_history.append(record)
+
+    def press_history(self) -> List[PressRecord]:
+        with self._lock:
+            return list(self._press_history)
+
+    def answer_history(self) -> List[AnswerRecord]:
+        with self._lock:
+            return list(self._answer_history)
+
+    def question_history(self) -> List[QuestionRecord]:
+        with self._lock:
+            return list(self._question_history)
+
+    def game_started_at(self) -> Optional[datetime]:
+        with self._lock:
+            return self._game_started_at
+
+    def set_game_started_at(self, timestamp: datetime) -> None:
+        with self._lock:
+            self._game_started_at = timestamp
+
+    def game_finished_at(self) -> Optional[datetime]:
+        with self._lock:
+            return self._game_finished_at
+
+    def set_game_finished_at(self, timestamp: datetime) -> None:
+        with self._lock:
+            self._game_finished_at = timestamp
+
+    def finalize_game(self) -> List[TeamResult]:
+        now = self._now()
+        press_history = list(self._press_history)
+        
+        with self._lock:
+            self._game_finished_at = now
+
+            if self._game_config is None:
+                return []
+
+            teams = list(self._game_config.teams)
+
+        press_times_by_team: Dict[str, List[float]] = {}
+        for press in press_history:
+            if press.team_id not in press_times_by_team:
+                press_times_by_team[press.team_id] = []
+            press_times_by_team[press.team_id].append(press.elapsed_time)
+
+        results: List[TeamResult] = []
+        for idx, team in enumerate(teams):
+            times = press_times_by_team.get(team.team_id, [])
+            avg_time = sum(times) / len(times) if times else 0.0
+
+            results.append(TeamResult(
+                position=idx + 1,
+                team_id=team.team_id,
+                team_name=team.name,
+                control_id=team.control_id,
+                score=team.score,
+                correct_answers=team.correct_answers,
+                incorrect_answers=team.incorrect_answers,
+                total_presses=team.total_presses,
+                average_press_time=round(avg_time, 2)
+            ))
+
+        results.sort(key=lambda x: (-x.score, -x.correct_answers, x.incorrect_answers, x.average_press_time))
+        for idx, r in enumerate(results):
+            r.position = idx + 1
+
+        return results
 
 
 app_state = AppState()

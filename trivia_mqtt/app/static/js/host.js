@@ -397,6 +397,7 @@ function connectWebSocket() {
     if (message.type === "controls_updated") {
       controls = message.data || [];
       renderControls();
+      updateButtons();
       return;
     }
 
@@ -416,6 +417,7 @@ function connectWebSocket() {
     if (message.type === "game_state_updated") {
       gameState = message.data || {};
       renderGameState();
+      updateButtons();
     }
   };
 
