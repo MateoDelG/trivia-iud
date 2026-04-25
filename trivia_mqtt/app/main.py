@@ -10,6 +10,7 @@ from fastapi import FastAPI, File, HTTPException, Request, UploadFile, WebSocket
 from fastapi.responses import HTMLResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
+from pydantic import BaseModel
 
 from app.game_engine import game_engine
 from app.models import EventRecord, GameConfig, LedCommandRequest, QuestionModeRequest, Team
@@ -420,6 +421,20 @@ async def game_resume() -> dict:
 @app.post("/api/game/end")
 async def game_end() -> dict:
     return await game_engine.end_game()
+
+
+class ViewChangeRequest(BaseModel):
+    view: str
+
+
+@app.post("/api/display/view")
+async def set_display_view(request: ViewChangeRequest):
+    await ws_manager.broadcast_json({
+        "type": "view_change",
+        "data": {"view": request.view}
+    })
+    return {"success": True}
+    return {"success": True}
 
 
 @app.websocket("/ws")

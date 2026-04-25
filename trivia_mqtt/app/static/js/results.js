@@ -93,3 +93,24 @@ async function loadResults() {
 }
 
 loadResults();
+
+const resultsChannel = new BroadcastChannel("display_view_channel");
+resultsChannel.onmessage = (event) => {
+  const view = event.data?.view;
+  if (view === "results") {
+    window.location.href = "/results";
+  } else if (view === "display") {
+    window.location.href = "/display";
+  }
+};
+
+window.addEventListener("storage", (event) => {
+  if (event.key === "display_view") {
+    const view = event.newValue;
+    if (view === "results") {
+      window.location.href = "/results";
+    } else if (view === "display") {
+      window.location.href = "/display";
+    }
+  }
+});

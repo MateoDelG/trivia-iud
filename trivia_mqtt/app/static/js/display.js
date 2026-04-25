@@ -222,8 +222,13 @@ function renderState() {
     showPopup(`Partida pausada: ${pauseReason}`, "warning", true);
   } else if (gameState.game_status === "game_finished") {
     showPopup("Partida finalizada", "success", true);
-  } else if (pausePopupVisible) {
-    hidePopup();
+    document.querySelector(".question-panel").style.display = "none";
+    document.querySelector(".timer-panel").style.display = "none";
+    document.querySelector(".times-panel").style.display = "none";
+  } else {
+    document.querySelector(".question-panel").style.display = "";
+    document.querySelector(".timer-panel").style.display = "";
+    document.querySelector(".times-panel").style.display = "";
   }
 
   const index = Number(gameState.current_question_index ?? -1);
@@ -264,6 +269,15 @@ function connectWebSocket() {
       maybeShowEventPopup(message.data || null);
       maybeShowControlDisconnectPopup(message.data || null);
     }
+
+    if (message.type === "view_change") {
+      const view = message.data?.view;
+      if (view === "results") {
+        window.location.href = "/results";
+      } else if (view === "display") {
+        window.location.href = "/display";
+      }
+    }
   };
 
   socket.onclose = () => {
@@ -275,3 +289,24 @@ loadInitialState().catch((error) => {
   console.error("Error loading display state", error);
 });
 connectWebSocket();
+
+const displayChannel = new BroadcastChannel("display_view_channel");
+displayChannel.onmessage = (event) => {
+  const view = event.data?.view;
+  if (view === "results") {
+    window.location.href = "/results";
+  } else if (view === "display") {
+    window.location.href = "/display";
+  }
+};
+
+window.addEventListener("storage", (event) => {
+  if (event.key === "display_view") {
+    const view = event.newValue;
+    if (view === "results") {
+      window.location.href = "/results";
+    } else if (view === "display") {
+      window.location.href = "/display";
+    }
+  }
+});

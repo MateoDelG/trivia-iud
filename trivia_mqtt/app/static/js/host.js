@@ -29,15 +29,16 @@ const btnAnswerCorrect = document.getElementById("btn-answer-correct");
 const btnAnswerIncorrect = document.getElementById("btn-answer-incorrect");
 const btnQuestionSkip = document.getElementById("btn-question-skip");
 const btnGameEnd = document.getElementById("btn-game-end");
-
+const btnToggleDisplay = document.getElementById("btn-toggle-display");
 const controlTemplate = document.getElementById("control-template");
 const eventTemplate = document.getElementById("event-template");
 const teamTemplate = document.getElementById("team-template");
 
-let controls = [];
+let currentDisplayView = "display";
 let events = [];
 let gameState = null;
 let hostPopupTimeout = null;
+let socket = null;
 const statusPopupTimestamps = new Map();
 const controlPrevStatus = new Map();
 
@@ -305,7 +306,7 @@ function updateButtons() {
   const isPaused = status === "game_paused";
 
   btnGameStart.disabled =
-    !canStartGame || ["game_running", "question_active", "waiting_for_answer", "game_paused"].includes(status);
+    !canStartGame || ["game_running", "question_ready", "question_active", "waiting_for_answer", "question_finished", "game_paused"].includes(status);
   btnQuestionStart.disabled = !["game_running", "question_finished"].includes(status) || hasDisconnectedAssigned || isPaused;
   btnTimerStart.disabled = status !== "question_ready" || hasDisconnectedAssigned || isPaused;
   btnGamePause.disabled =
@@ -354,6 +355,13 @@ async function callGameAction(endpoint) {
   return data;
 }
 
+function toggleDisplayView() {
+  currentDisplayView = currentDisplayView === "display" ? "results" : "display";
+  localStorage.setItem("display_view", currentDisplayView);
+  localStorage.removeItem("display_view");
+  btnToggleDisplay.textContent = currentDisplayView === "display" ? "Ver resultados" : "Volver a display";
+}
+
 async function sendLedCommand(deviceId, mode) {
   const response = await fetch(`/api/controls/${encodeURIComponent(deviceId)}/led`, {
     method: "POST",
@@ -390,7 +398,7 @@ async function loadInitialData() {
 
 function connectWebSocket() {
   const protocol = window.location.protocol === "https:" ? "wss" : "ws";
-  const socket = new WebSocket(`${protocol}://${window.location.host}/ws`);
+  socket = new WebSocket(`${protocol}://${window.location.host}/ws`);
 
   socket.onmessage = (event) => {
     const message = JSON.parse(event.data);
@@ -467,3 +475,7 @@ loadInitialData().catch((error) => {
   setActionMessage("No se pudo cargar el estado inicial.", "error");
 });
 connectWebSocket();
+
+btnToggleDisplay.addEventListener("click", () => {
+  toggleDisplayView();
+});
