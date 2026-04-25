@@ -10,17 +10,19 @@ Incluye:
 - Vista `/setup` para configurar partida y equipos
 - API para listar controles y eventos
 - API para guardar configuracion de partida (`/api/game-config`)
+- API de motor de juego (`/api/game/start`, `/api/game/question/start`, `/api/game/state`, validacion de respuestas)
 - API para probar controles (`/api/controls/{device_id}/test`)
 - WebSocket en tiempo real (`/ws`)
 - Integracion MQTT para `status`, `button` y comandos `led`
 - Simulador de control MQTT por consola
+- Carga y validacion de preguntas CSV/XLSX
+- Pantalla publica `/display`
 
 No incluye aun:
 
-- Preguntas
-- Puntajes
-- Temporizador
-- Carga CSV/Excel
+- Exportacion de resultados
+- Persistencia en base de datos
+- Modo torneo y estadisticas avanzadas
 
 ## 1) Instalar dependencias
 
@@ -129,18 +131,49 @@ Columnas opcionales:
 
 - `categoria`
 - `dificultad`
-- `retroalimentacion`
+- `explicación`
 
 Aclaraciones:
 
 - El tiempo por pregunta **NO** va en el archivo.
 - El tiempo por pregunta se configura en `/setup` al crear la partida.
+- Para compatibilidad se acepta tambien `explicacion` (sin tilde) o `retroalimentacion` como alias.
 
 Ejemplo CSV:
 
 ```csv
-id,pregunta,opcion_a,opcion_b,opcion_c,opcion_d,respuesta_correcta,puntos,categoria,dificultad,retroalimentacion
+id,pregunta,opcion_a,opcion_b,opcion_c,opcion_d,respuesta_correcta,puntos,categoria,dificultad,explicacion
 1,¿Qué protocolo se usa comúnmente en IoT?,HTTP,MQTT,FTP,SMTP,B,100,IoT,Fácil,MQTT es un protocolo ligero basado en publish/subscribe.
 2,¿Qué componente puede medir temperatura y humedad?,LED,DHT11,Relé,Buzzer,B,100,Sensores,Fácil,El DHT11 permite medir temperatura y humedad.
 3,¿Qué placa es común para proyectos IoT?,ESP32,Motor DC,Resistencia,Protoboard,A,100,Microcontroladores,Fácil,El ESP32 integra WiFi y Bluetooth.
 ```
+
+## 9) Flujo de partida (host + display)
+
+1. Ejecutar Mosquitto (`mosquitto -v`).
+2. Ejecutar servidor desde `trivia_mqtt/`:
+
+```powershell
+uvicorn app.main:app --reload
+```
+
+3. Ejecutar simuladores en terminales separadas:
+
+```powershell
+python tools/simulate_control.py control_01
+python tools/simulate_control.py control_02
+python tools/simulate_control.py control_03
+```
+
+4. Abrir `http://localhost:8000/setup`.
+5. Configurar equipos, cargar preguntas y definir tiempo por pregunta.
+6. Abrir `http://localhost:8000/host`.
+7. Abrir `http://localhost:8000/display` en otra pestaña/pantalla.
+8. En `/host`, usar:
+   - `Iniciar partida`
+   - `Iniciar siguiente pregunta`
+   - `Iniciar temporizador`
+9. En un simulador, escribir `press`.
+10. Verificar equipo en turno y cola de pulsaciones.
+11. Marcar `correcta` o `incorrecta` desde `/host`.
+12. Verificar ranking y puntajes actualizados en `/host` y `/display`.

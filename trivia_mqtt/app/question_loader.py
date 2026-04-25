@@ -20,7 +20,7 @@ REQUIRED_COLUMNS = [
     "puntos",
 ]
 
-OPTIONAL_COLUMNS = ["categoria", "dificultad", "retroalimentacion"]
+OPTIONAL_COLUMNS = ["categoria", "dificultad", "explicacion", "explicación", "retroalimentacion"]
 SUPPORTED_EXTENSIONS = {".csv", ".xlsx"}
 
 
@@ -42,7 +42,20 @@ def _question_row_number(index: int) -> int:
     return index + 2
 
 
+def _prepare_dataframe(df: pd.DataFrame) -> pd.DataFrame:
+    prepared = df.rename(columns={column: str(column).strip().lower() for column in df.columns})
+
+    if "explicacion" not in prepared.columns:
+        if "explicación" in prepared.columns:
+            prepared["explicacion"] = prepared["explicación"]
+        elif "retroalimentacion" in prepared.columns:
+            prepared["explicacion"] = prepared["retroalimentacion"]
+
+    return prepared
+
+
 def validate_questions_dataframe(df: pd.DataFrame) -> Tuple[bool, list[str]]:
+    df = _prepare_dataframe(df)
     errors: list[str] = []
 
     missing_columns = [column for column in REQUIRED_COLUMNS if column not in df.columns]
@@ -96,6 +109,7 @@ def validate_questions_dataframe(df: pd.DataFrame) -> Tuple[bool, list[str]]:
 
 
 def normalize_questions(df: pd.DataFrame) -> list[Question]:
+    df = _prepare_dataframe(df)
     questions: list[Question] = []
 
     for _, row in df.iterrows():
@@ -111,7 +125,8 @@ def normalize_questions(df: pd.DataFrame) -> list[Question]:
                 points=float(row.get("puntos")),
                 category=_as_text(row.get("categoria")) or None,
                 difficulty=_as_text(row.get("dificultad")) or None,
-                feedback=_as_text(row.get("retroalimentacion")) or None,
+                explanation=_as_text(row.get("explicacion")) or None,
+                feedback=_as_text(row.get("explicacion")) or None,
             )
         )
 

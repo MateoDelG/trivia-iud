@@ -8,36 +8,99 @@
     <link rel="stylesheet" href="/static/css/host.css" />
   </head>
   <body>
-    <main class="container">
-      <header class="header">
-        <h1>TriviaMQTT - Panel del Host</h1>
-        <p>Monitoreo de controles y partida configurada</p>
+    <div class="noise-overlay" aria-hidden="true"></div>
+
+    <div class="app-shell">
+      <header class="topbar">
+        <div class="brand">TriviaMQTT Host</div>
+        <nav class="nav-links" aria-label="Navegacion principal">
+          <a href="/setup">Configuracion</a>
+          <a href="/host" aria-current="page" class="active">Host</a>
+          <a href="/display">Display</a>
+        </nav>
+        <a class="btn btn-primary" href="/display" target="_blank" rel="noopener">Abrir display</a>
       </header>
 
-      <section class="panel" id="game-config-panel">
-        <h2>Partida configurada</h2>
-        <div id="game-name" class="list-empty">No hay partida configurada.</div>
-        <div id="question-time" class="list-empty">Tiempo por pregunta: -</div>
-        <div id="teams-list" class="list-empty">No hay equipos configurados.</div>
-      </section>
+      <main class="page-container host-page">
+        <section class="hero animate-fade-up">
+          <span class="badge"><span class="status-dot"></span> Control central en tiempo real</span>
+          <h1>Gestiona la <span class="gradient-text">partida en vivo</span> y valida respuestas</h1>
+          <p>Inicia rondas, controla el temporizador, revisa la cola de pulsaciones y lleva el marcador sin perder ritmo.</p>
+        </section>
 
-      <section class="panel" id="questions-panel">
-        <h2>Banco de preguntas</h2>
-        <div id="questions-loaded" class="list-empty">Preguntas cargadas: no</div>
-        <div id="total-questions" class="list-empty">Total de preguntas: 0</div>
-        <div id="question-mode" class="list-empty">Modo de preguntas: ordered</div>
-      </section>
+        <section class="host-layout">
+          <section class="left-column">
+            <section class="card" id="controls-panel">
+              <h2 class="card-title">Controles de juego</h2>
+              <div class="game-actions">
+                <button id="btn-game-start" class="primary">Iniciar partida</button>
+                <button id="btn-question-start" class="btn-secondary">Iniciar siguiente pregunta</button>
+                <button id="btn-timer-start" class="btn-secondary">Iniciar temporizador</button>
+                <button id="btn-game-pause" class="btn-secondary">Pausar partida</button>
+                <button id="btn-game-resume" class="btn-secondary">Reanudar partida</button>
+                <button id="btn-answer-correct" class="primary">Marcar correcta</button>
+                <button id="btn-answer-incorrect" class="btn-secondary">Marcar incorrecta</button>
+                <button id="btn-question-skip" class="btn-secondary">Saltar pregunta</button>
+                <button id="btn-game-end" class="danger">Finalizar partida</button>
+              </div>
+              <div id="host-action-message" class="list-empty">Sin acciones ejecutadas.</div>
+            </section>
 
-      <section class="panel" id="controls-panel">
-        <h2>Controles detectados</h2>
-        <div id="controls-list" class="list-empty">No hay controles detectados.</div>
-      </section>
+            <section class="card" id="question-panel">
+              <h2 class="card-title">Pregunta actual</h2>
+              <div id="question-index" class="list-empty">Pregunta -/-</div>
+              <h3 id="question-text" class="list-empty">Sin pregunta activa.</h3>
+              <div id="question-options" class="question-options"></div>
+              <div id="question-correct" class="host-correct-answer">Respuesta correcta: -</div>
+              <div id="question-explanation" class="host-explanation">Explicacion: se muestra al validar la pregunta.</div>
+              <div id="question-timer" class="timer-value">0 s</div>
+            </section>
 
-      <section class="panel" id="events-panel">
-        <h2>Historial de eventos</h2>
-        <div id="events-list" class="list-empty">No hay eventos todavia.</div>
-      </section>
-    </main>
+            <section class="card" id="queue-panel">
+              <h2 class="card-title">Turno y cola de pulsaciones</h2>
+              <div id="current-team" class="list-empty">Equipo en turno: -</div>
+              <ol id="press-queue" class="press-queue list-empty"></ol>
+            </section>
+          </section>
+
+          <section class="right-column">
+            <section class="card" id="game-state-panel">
+              <h2 class="card-title">Estado de partida</h2>
+              <div id="game-status" class="state-badge">setup</div>
+              <div id="game-name" class="list-empty">No hay partida configurada.</div>
+              <div id="question-time" class="list-empty">Tiempo por pregunta: -</div>
+              <div id="question-mode" class="list-empty">Modo de preguntas: -</div>
+              <div id="questions-loaded" class="list-empty">Preguntas cargadas: no</div>
+              <div id="total-questions" class="list-empty">Total de preguntas: 0</div>
+            </section>
+
+            <section class="card" id="ranking-panel">
+              <h2 class="card-title">Ranking</h2>
+              <div id="ranking-list" class="list-empty">Sin puntajes aun.</div>
+            </section>
+
+            <section class="card" id="teams-panel">
+              <h2 class="card-title">Equipos configurados</h2>
+              <div id="teams-list" class="list-empty">No hay equipos configurados.</div>
+            </section>
+
+            <section class="card" id="control-monitor-panel">
+              <h2 class="card-title">Controles detectados</h2>
+              <div id="controls-list" class="list-empty">No hay controles detectados.</div>
+            </section>
+
+            <section class="card" id="events-panel">
+              <h2 class="card-title">Historial de eventos</h2>
+              <div id="events-list" class="list-empty">No hay eventos todavia.</div>
+            </section>
+          </section>
+        </section>
+
+        <div id="host-popup" class="host-popup hidden" role="status" aria-live="polite">
+          <div id="host-popup-content" class="host-popup-content">Mensaje</div>
+        </div>
+      </main>
+    </div>
 
     <template id="control-template">
       <article class="control-item">
@@ -47,10 +110,10 @@
           <span class="control-last-seen"></span>
         </div>
         <div class="control-actions">
-          <button data-mode="on">on</button>
-          <button data-mode="off">off</button>
-          <button data-mode="blink_slow">blink_slow</button>
-          <button data-mode="blink_fast">blink_fast</button>
+          <button data-mode="on" class="btn-secondary">on</button>
+          <button data-mode="off" class="btn-secondary">off</button>
+          <button data-mode="blink_slow" class="btn-secondary">blink_slow</button>
+          <button data-mode="blink_fast" class="btn-secondary">blink_fast</button>
         </div>
       </article>
     </template>
@@ -67,7 +130,7 @@
       <article class="team-item">
         <strong class="team-name"></strong>
         <span class="team-control"></span>
-        <span class="team-score"></span>
+        <span class="team-stats"></span>
       </article>
     </template>
 

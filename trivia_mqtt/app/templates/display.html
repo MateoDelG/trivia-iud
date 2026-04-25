@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>TriviaMQTT - Pantalla Publica</title>
+    <link rel="stylesheet" href="/static/css/theme.css" />
+    <link rel="stylesheet" href="/static/css/display.css" />
+  </head>
+  <body>
+    <div class="noise-overlay" aria-hidden="true"></div>
+
+    <div class="display-shell">
+      <header class="topbar">
+        <div class="brand">TriviaMQTT Display</div>
+        <nav class="nav-links" aria-label="Navegacion principal">
+          <a href="/setup">Configuracion</a>
+          <a href="/host">Host</a>
+          <a href="/display" aria-current="page" class="active">Display</a>
+        </nav>
+        <span class="badge">Pantalla publica</span>
+      </header>
+
+      <main class="display-container">
+        <section class="display-header animate-fade-up">
+          <h1 id="display-game-name" class="display-title">TriviaMQTT</h1>
+          <p id="display-status" class="display-status">Esperando inicio</p>
+      </section>
+
+        <section class="question-panel">
+        <div id="display-question-index" class="question-index">Pregunta -/-</div>
+        <h2 id="display-question-text" class="question-text">Esperando pregunta...</h2>
+        <div id="display-options" class="options-grid"></div>
+      </section>
+
+        <section class="display-grid">
+          <section class="timer-panel">
+            <div id="display-timer" class="timer-value">--</div>
+            <div id="display-current-team" class="current-team">Equipo en turno: -</div>
+          </section>
+
+          <section class="score-panel">
+            <h3>Ranking</h3>
+            <div id="display-ranking" class="list-empty">Sin puntajes aun.</div>
+          </section>
+
+          <section class="times-panel">
+            <h3>Tiempos de respuesta</h3>
+            <div id="display-response-times" class="list-empty">Sin respuestas aun.</div>
+          </section>
+        </section>
+
+        <div id="display-popup" class="display-popup hidden" role="status" aria-live="polite">
+          <div id="display-popup-content" class="display-popup-content">Mensaje</div>
+        </div>
+      </main>
+    </div>
+
+    <script src="/static/js/display.js"></script>
+  </body>
+</html>

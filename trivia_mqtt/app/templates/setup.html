@@ -8,91 +8,126 @@
     <link rel="stylesheet" href="/static/css/setup.css" />
   </head>
   <body>
-    <main class="container">
-      <header class="header">
-        <h1>Configurar partida</h1>
-        <p>Define equipos y asigna un control a cada uno.</p>
+    <div class="noise-overlay" aria-hidden="true"></div>
+
+    <div class="app-shell">
+      <header class="topbar">
+        <div class="brand">TriviaMQTT Setup</div>
+        <nav class="nav-links" aria-label="Navegacion principal">
+          <a href="/setup" aria-current="page" class="active">Configuracion</a>
+          <a href="/host">Host</a>
+          <a href="/display">Display</a>
+        </nav>
+        <a class="btn btn-primary" href="/host">Ir a partida</a>
       </header>
 
-      <section class="panel">
-        <h2>Datos de partida</h2>
-        <label for="game-name">Nombre de la partida</label>
-        <input id="game-name" type="text" placeholder="Trivia IoT" />
+      <main class="page-container setup-page">
+        <section class="hero animate-fade-up">
+          <span class="badge"><span class="status-dot"></span> Sistema listo para configurar</span>
+        <h1>Configura tu <span class="gradient-text">trivia en vivo</span> con controles MQTT</h1>
+        <p>
+          Define equipos, tiempo de respuesta y banco de preguntas en una sola vista. Los cambios se sincronizan en tiempo real
+          para host y display.
+        </p>
+          <div class="setup-quick-actions">
+            <a class="btn btn-secondary" href="/host">Ir al panel host</a>
+            <a class="btn btn-secondary" href="/display" target="_blank" rel="noopener">Abrir display</a>
+          </div>
+        </section>
 
-        <label for="question-time">Tiempo por pregunta (segundos)</label>
-        <input id="question-time" type="number" min="5" max="120" step="1" value="20" />
+        <section class="setup-grid">
+          <section class="card">
+            <h2 class="card-title">Datos de partida</h2>
+            <div class="form-group">
+              <label for="game-name">Nombre de la partida</label>
+              <input id="game-name" type="text" placeholder="Trivia IoT" />
+            </div>
 
-        <label for="team-count">Numero de equipos</label>
-        <select id="team-count">
-          <option value="1">1</option>
-          <option value="2">2</option>
-          <option value="3">3</option>
-          <option value="4">4</option>
-          <option value="5">5</option>
-          <option value="6">6</option>
-          <option value="7">7</option>
-          <option value="8">8</option>
-          <option value="9">9</option>
-          <option value="10">10</option>
-        </select>
-      </section>
+            <div class="form-group">
+              <label for="question-time">Tiempo por pregunta (segundos)</label>
+              <input id="question-time" type="number" min="5" max="120" step="1" value="20" />
+            </div>
 
-      <section class="panel">
-        <h2>Controles detectados</h2>
-        <div id="detected-controls" class="list-empty">No hay controles detectados.</div>
-      </section>
+            <div class="form-group">
+              <label for="team-count">Numero de equipos</label>
+              <select id="team-count">
+                <option value="1">1</option>
+                <option value="2">2</option>
+                <option value="3">3</option>
+                <option value="4">4</option>
+                <option value="5">5</option>
+                <option value="6">6</option>
+                <option value="7">7</option>
+                <option value="8">8</option>
+                <option value="9">9</option>
+                <option value="10">10</option>
+              </select>
+            </div>
+          </section>
 
-      <section class="panel">
-        <h2>Equipos</h2>
-        <div id="teams-form"></div>
-      </section>
+          <section class="card">
+            <h2 class="card-title">Controles detectados</h2>
+          <div id="detected-controls" class="list-empty">No hay controles detectados.</div>
+          </section>
+        </section>
 
-      <section class="panel actions-panel">
-        <button id="save-config-btn" class="primary">Guardar configuracion</button>
-        <div id="validation-messages" class="list-empty">Sin mensajes.</div>
-      </section>
+        <section class="card">
+          <h2 class="card-title">Equipos</h2>
+          <div id="teams-form"></div>
+        </section>
 
-      <section class="panel questions-panel">
-        <h2>Banco de preguntas</h2>
-        <label for="question-file">Archivo de preguntas (.csv o .xlsx)</label>
-        <input id="question-file" type="file" accept=".csv,.xlsx" />
-        <button id="upload-questions-btn" type="button">Cargar preguntas</button>
+        <section class="card actions-card">
+          <button id="save-config-btn" class="primary">Guardar configuracion</button>
+          <div id="validation-messages" class="list-empty">Sin mensajes.</div>
+        </section>
 
-        <label for="question-mode-select">Modo de preguntas</label>
-        <select id="question-mode-select">
-          <option value="ordered">Orden original del archivo</option>
-          <option value="random">Aleatorio</option>
-        </select>
+        <section class="card questions-panel">
+          <h2 class="card-title">Banco de preguntas</h2>
+          <div class="form-group">
+            <label for="question-file">Archivo de preguntas (.csv o .xlsx)</label>
+            <input id="question-file" type="file" accept=".csv,.xlsx" />
+          </div>
+          <button id="upload-questions-btn" type="button" class="btn-secondary">Cargar preguntas</button>
 
-        <div id="questions-counter" class="list-empty">Preguntas cargadas: 0</div>
-        <div id="questions-upload-messages" class="list-empty">Sin mensajes de carga.</div>
-        <ul id="questions-errors" class="error-list"></ul>
+          <div class="form-group">
+            <label for="question-mode-select">Modo de preguntas</label>
+            <select id="question-mode-select">
+              <option value="ordered">Orden original del archivo</option>
+              <option value="random">Aleatorio</option>
+            </select>
+          </div>
 
-        <div class="questions-preview-wrapper">
-          <table id="questions-preview-table" class="questions-preview-table">
-            <thead>
-              <tr>
-                <th>id</th>
-                <th>pregunta</th>
-                <th>opcion_a</th>
-                <th>opcion_b</th>
-                <th>opcion_c</th>
-                <th>opcion_d</th>
-                <th>respuesta_correcta</th>
-                <th>puntos</th>
-                <th>categoria</th>
-                <th>dificultad</th>
-              </tr>
-            </thead>
-            <tbody id="questions-preview-body">
-              <tr>
-                <td colspan="10" class="list-empty">No hay preguntas cargadas.</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </section>
-    </main>
+          <div id="questions-counter" class="list-empty">Preguntas cargadas: 0</div>
+          <div id="questions-upload-messages" class="list-empty">Sin mensajes de carga.</div>
+          <ul id="questions-errors" class="error-list"></ul>
+
+          <div class="questions-preview-wrapper">
+            <table id="questions-preview-table" class="questions-preview-table">
+              <thead>
+                <tr>
+                  <th>id</th>
+                  <th>pregunta</th>
+                  <th>opcion_a</th>
+                  <th>opcion_b</th>
+                  <th>opcion_c</th>
+                  <th>opcion_d</th>
+                  <th>respuesta_correcta</th>
+                  <th>puntos</th>
+                  <th>categoria</th>
+                  <th>dificultad</th>
+                  <th>explicacion</th>
+                </tr>
+              </thead>
+              <tbody id="questions-preview-body">
+                <tr>
+                  <td colspan="11" class="list-empty">No hay preguntas cargadas.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+      </main>
+    </div>
 
     <template id="team-row-template">
       <article class="team-row">
@@ -103,7 +138,7 @@
         <label>Control asignado</label>
         <select class="team-control-select"></select>
 
-        <button class="test-control-btn" type="button">Probar control</button>
+        <button class="test-control-btn btn-secondary" type="button">Probar control</button>
       </article>
     </template>
 

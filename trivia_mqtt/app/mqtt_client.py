@@ -11,6 +11,7 @@ from typing import Any, Dict, Optional
 import paho.mqtt.client as mqtt
 
 from app import config
+from app.game_engine import game_engine
 from app.models import EventRecord
 from app.state import app_state
 from app.websocket_manager import ws_manager
@@ -75,35 +76,16 @@ class MQTTClientService:
             app_state.add_event(event)
             self._notify_controls_updated()
             self._notify_event_received(event.model_dump(mode="json"))
+            if status.lower() == "offline" and app_state.game_status() == "question_active":
+                self._notify_pause_due_disconnection(device_id)
             return
 
         if topic.endswith("/button"):
             app_state.mark_control_seen(device_id=device_id)
-            team = app_state.find_team_by_control(device_id)
-            if team:
-                event_type = str(payload.get("event", "button_pressed"))
-                message = f"{team.name} presiono usando {device_id}"
-                team_id = team.team_id
-                team_name = team.name
-            else:
-                event_type = "button_ignored"
-                message = "Pulsacion ignorada: control no asignado"
-                team_id = None
-                team_name = None
-
-            event = EventRecord(
-                timestamp=datetime.now(timezone.utc),
-                device_id=device_id,
-                event_type=event_type,
-                topic=topic,
-                payload=payload,
-                team_id=team_id,
-                team_name=team_name,
-                message=message,
-            )
+            event = game_engine.handle_button_press(device_id=device_id, topic=topic, payload=payload)
             app_state.add_event(event)
             self._notify_controls_updated()
-            self._notify_event_received(event.model_dump(mode="json"))
+            self._notify_button_processed(event)
 
     @staticmethod
     def _decode_payload(raw_payload: bytes) -> Optional[Dict[str, Any]]:
@@ -135,6 +117,20 @@ class MQTTClientService:
             return
         message = {"type": "event_received", "data": event_payload}
         self._loop.call_soon_threadsafe(asyncio.create_task, ws_manager.broadcast_json(message))
+
+    def _notify_button_processed(self, event: EventRecord) -> None:
+        if not self._loop:
+            return
+        self._loop.call_soon_threadsafe(asyncio.create_task, game_engine.on_button_event_processed(event))
+
+    def _notify_pause_due_disconnection(self, device_id: str) -> None:
+        if not self._loop:
+            return
+        reason = f"Control desconectado durante la cuenta regresiva: {device_id}"
+        self._loop.call_soon_threadsafe(
+            asyncio.create_task,
+            game_engine.pause_game(reason=reason, source="auto_disconnect"),
+        )
 
 
 mqtt_service = MQTTClientService()

@@ -330,7 +330,7 @@ function renderQuestionsPreview() {
   if (!questionsLoaded || questionsPreview.length === 0) {
     const row = document.createElement("tr");
     const cell = document.createElement("td");
-    cell.colSpan = 10;
+    cell.colSpan = 11;
     cell.className = "list-empty";
     cell.textContent = "No hay preguntas cargadas.";
     row.appendChild(cell);
@@ -351,6 +351,7 @@ function renderQuestionsPreview() {
       question.points,
       question.category || "",
       question.difficulty || "",
+      question.explanation || question.feedback || "",
     ];
 
     values.forEach((value) => {

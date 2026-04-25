@@ -11,6 +11,7 @@ from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
+from app.game_engine import game_engine
 from app.models import EventRecord, GameConfig, LedCommandRequest, QuestionModeRequest, Team
 from app.mqtt_client import mqtt_service
 from app.question_loader import SUPPORTED_EXTENSIONS, load_questions_from_file
@@ -50,6 +51,8 @@ async def _presence_watchdog() -> None:
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     mqtt_service.set_loop(asyncio.get_running_loop())
+    game_engine.set_loop(asyncio.get_running_loop())
+    game_engine.set_led_sender(mqtt_service.publish_led_command)
     mqtt_service.start()
     presence_task = asyncio.create_task(_presence_watchdog())
     try:
@@ -76,6 +79,11 @@ async def host_view(request: Request) -> HTMLResponse:
 @app.get("/setup", response_class=HTMLResponse)
 async def setup_view(request: Request) -> HTMLResponse:
     return templates.TemplateResponse("setup.html", {"request": request})
+
+
+@app.get("/display", response_class=HTMLResponse)
+async def display_view(request: Request) -> HTMLResponse:
+    return templates.TemplateResponse("display.html", {"request": request})
 
 
 @app.get("/api/controls")
@@ -108,6 +116,11 @@ async def get_teams() -> dict:
 @app.get("/api/questions")
 async def get_questions() -> dict:
     return _questions_snapshot()
+
+
+@app.get("/api/game/state")
+async def get_game_state() -> dict:
+    return app_state.game_runtime_snapshot()
 
 
 @app.post("/api/game-config")
@@ -149,7 +162,18 @@ async def save_game_config(payload: GameConfig) -> dict:
             )
 
         used_controls.add(control_id)
-        normalized_teams.append(Team(team_id=team_id, name=team_name, control_id=control_id, score=0))
+        normalized_teams.append(
+            Team(
+                team_id=team_id,
+                name=team_name,
+                control_id=control_id,
+                score=0,
+                correct_answers=0,
+                incorrect_answers=0,
+                total_presses=0,
+                is_active=True,
+            )
+        )
 
     saved_config = app_state.set_game_config(
         GameConfig(
@@ -198,6 +222,7 @@ async def save_game_config(payload: GameConfig) -> dict:
             "data": config_event.model_dump(mode="json"),
         }
     )
+    await game_engine.broadcast_state()
 
     return {
         "ok": True,
@@ -256,6 +281,7 @@ async def upload_questions(file: UploadFile = File(...)) -> dict:
         )
         app_state.add_event(error_event)
         await ws_manager.broadcast_json({"type": "event_received", "data": error_event.model_dump(mode="json")})
+        await game_engine.broadcast_state()
         return {"success": False, "message": "El archivo no es valido", "errors": [error_message]}
 
     temp_path: Path | None = None
@@ -279,6 +305,7 @@ async def upload_questions(file: UploadFile = File(...)) -> dict:
             await ws_manager.broadcast_json(
                 {"type": "event_received", "data": error_event.model_dump(mode="json")}
             )
+            await game_engine.broadcast_state()
             return {"success": False, "message": "El archivo no es valido", "errors": errors}
 
         app_state.set_questions(questions)
@@ -296,6 +323,7 @@ async def upload_questions(file: UploadFile = File(...)) -> dict:
         questions_payload = _questions_snapshot()
         await ws_manager.broadcast_json({"type": "questions_updated", "data": questions_payload})
         await ws_manager.broadcast_json({"type": "event_received", "data": success_event.model_dump(mode="json")})
+        await game_engine.broadcast_state()
 
         return {
             "success": True,
@@ -335,12 +363,58 @@ async def save_questions_config(payload: QuestionModeRequest) -> dict:
         }
     )
     await ws_manager.broadcast_json({"type": "event_received", "data": mode_event.model_dump(mode="json")})
+    await game_engine.broadcast_state()
 
     return {
         "success": True,
         "question_mode": question_mode,
         "message": "Modo de preguntas actualizado",
     }
+
+
+@app.post("/api/game/start")
+async def game_start() -> dict:
+    return await game_engine.start_game()
+
+
+@app.post("/api/game/question/start")
+async def game_question_start() -> dict:
+    return await game_engine.start_next_question()
+
+
+@app.post("/api/game/question/timer/start")
+async def game_question_timer_start() -> dict:
+    return await game_engine.start_question_timer()
+
+
+@app.post("/api/game/answer/correct")
+async def game_answer_correct() -> dict:
+    return await game_engine.mark_answer_correct()
+
+
+@app.post("/api/game/answer/incorrect")
+async def game_answer_incorrect() -> dict:
+    return await game_engine.mark_answer_incorrect()
+
+
+@app.post("/api/game/question/skip")
+async def game_question_skip() -> dict:
+    return await game_engine.skip_question()
+
+
+@app.post("/api/game/pause")
+async def game_pause() -> dict:
+    return await game_engine.pause_game(reason="Pausa manual del host", source="manual")
+
+
+@app.post("/api/game/resume")
+async def game_resume() -> dict:
+    return await game_engine.resume_game()
+
+
+@app.post("/api/game/end")
+async def game_end() -> dict:
+    return await game_engine.end_game()
 
 
 @app.websocket("/ws")
@@ -364,6 +438,7 @@ async def websocket_endpoint(websocket: WebSocket) -> None:
     await websocket.send_json(
         {"type": "questions_config_updated", "data": {"question_mode": app_state.question_mode()}}
     )
+    await websocket.send_json({"type": "game_state_updated", "data": app_state.game_runtime_snapshot()})
 
     try:
         while True:

@@ -1,4 +1,4 @@
-id,pregunta,opcion_a,opcion_b,opcion_c,opcion_d,respuesta_correcta,puntos,categoria,dificultad,retroalimentacion
+id,pregunta,opcion_a,opcion_b,opcion_c,opcion_d,respuesta_correcta,puntos,categoria,dificultad,explicacion
 1,¿Qué protocolo se usa comúnmente en IoT?,HTTP,MQTT,FTP,SMTP,B,100,IoT,Fácil,MQTT es un protocolo ligero basado en publish/subscribe.
 2,¿Qué componente puede medir temperatura y humedad?,LED,DHT11,Relé,Buzzer,B,100,Sensores,Fácil,El DHT11 permite medir temperatura y humedad.
 3,¿Qué placa es común para proyectos IoT?,ESP32,Motor DC,Resistencia,Protoboard,A,100,Microcontroladores,Fácil,El ESP32 integra WiFi y Bluetooth.

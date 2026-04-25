@@ -28,6 +28,10 @@ class Team(BaseModel):
     name: str
     control_id: str
     score: int = 0
+    correct_answers: int = 0
+    incorrect_answers: int = 0
+    total_presses: int = 0
+    is_active: bool = True
 
 
 class GameConfig(BaseModel):
@@ -49,11 +53,29 @@ class Question(BaseModel):
     points: float
     category: Optional[str] = None
     difficulty: Optional[str] = None
+    explanation: Optional[str] = None
     feedback: Optional[str] = None
 
 
 class QuestionModeRequest(BaseModel):
     question_mode: Literal["ordered", "random"]
+
+
+class ButtonPress(BaseModel):
+    device_id: str
+    team_id: str
+    team_name: str
+    question_id: str
+    server_timestamp: datetime
+    elapsed_time: float
+
+
+class GameRuntime(BaseModel):
+    game_status: str
+    current_question: Optional[Question] = None
+    current_team: Optional[Team] = None
+    press_queue: List[ButtonPress] = Field(default_factory=list)
+    question_remaining_time: int = 0
 
 
 class LedCommandRequest(BaseModel):
