@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>TriviaMQTT - Panel del Host</title>
+    <link rel="stylesheet" href="/static/css/theme.css" />
+    <link rel="stylesheet" href="/static/css/host.css" />
+  </head>
+  <body>
+    <main class="container">
+      <header class="header">
+        <h1>TriviaMQTT - Panel del Host</h1>
+        <p>Monitoreo de controles y partida configurada</p>
+      </header>
+
+      <section class="panel" id="game-config-panel">
+        <h2>Partida configurada</h2>
+        <div id="game-name" class="list-empty">No hay partida configurada.</div>
+        <div id="question-time" class="list-empty">Tiempo por pregunta: -</div>
+        <div id="teams-list" class="list-empty">No hay equipos configurados.</div>
+      </section>
+
+      <section class="panel" id="questions-panel">
+        <h2>Banco de preguntas</h2>
+        <div id="questions-loaded" class="list-empty">Preguntas cargadas: no</div>
+        <div id="total-questions" class="list-empty">Total de preguntas: 0</div>
+        <div id="question-mode" class="list-empty">Modo de preguntas: ordered</div>
+      </section>
+
+      <section class="panel" id="controls-panel">
+        <h2>Controles detectados</h2>
+        <div id="controls-list" class="list-empty">No hay controles detectados.</div>
+      </section>
+
+      <section class="panel" id="events-panel">
+        <h2>Historial de eventos</h2>
+        <div id="events-list" class="list-empty">No hay eventos todavia.</div>
+      </section>
+    </main>
+
+    <template id="control-template">
+      <article class="control-item">
+        <div class="control-main">
+          <strong class="control-id"></strong>
+          <span class="control-status"></span>
+          <span class="control-last-seen"></span>
+        </div>
+        <div class="control-actions">
+          <button data-mode="on">on</button>
+          <button data-mode="off">off</button>
+          <button data-mode="blink_slow">blink_slow</button>
+          <button data-mode="blink_fast">blink_fast</button>
+        </div>
+      </article>
+    </template>
+
+    <template id="event-template">
+      <article class="event-item">
+        <span class="event-time"></span>
+        <strong class="event-device"></strong>
+        <span class="event-message"></span>
+      </article>
+    </template>
+
+    <template id="team-template">
+      <article class="team-item">
+        <strong class="team-name"></strong>
+        <span class="team-control"></span>
+        <span class="team-score"></span>
+      </article>
+    </template>
+
+    <script src="/static/js/host.js"></script>
+  </body>
+</html>

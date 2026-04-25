@@ -1,0 +1,1 @@
+"""TriviaMQTT app package."""
