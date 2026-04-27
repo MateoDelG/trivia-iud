@@ -1,0 +1,131 @@
+.results-page {
+  max-width: 1240px;
+  margin: 0 auto;
+  padding: 1.5rem;
+  display: grid;
+  gap: 1.2rem;
+}
+
+.results-header {
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 1.2rem;
+  background: rgba(15, 23, 42, 0.74);
+  padding: 1rem 1.2rem;
+}
+
+.results-header h1 {
+  margin: 0;
+  font-size: clamp(1.7rem, 4vw, 2.6rem);
+}
+
+.results-header p {
+  margin: 0.35rem 0 0;
+  color: var(--text-muted);
+}
+
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 0.9rem;
+}
+
+.stat-card {
+  background: rgba(2, 6, 23, 0.62);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 1rem;
+  padding: 0.9rem;
+}
+
+.stat-card h3 {
+  margin: 0;
+  color: var(--text-soft);
+  font-size: 0.9rem;
+}
+
+.stat-card .value {
+  margin-top: 0.35rem;
+  font-size: 1.9rem;
+  font-weight: 800;
+  color: #e2e8f0;
+}
+
+.section-title {
+  margin: 0;
+  font-size: 1.2rem;
+}
+
+.results-section {
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 1rem;
+  background: rgba(15, 23, 42, 0.72);
+  padding: 0.9rem;
+  display: grid;
+  gap: 0.7rem;
+}
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  overflow: hidden;
+}
+
+.data-table th,
+.data-table td {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.09);
+  padding: 0.55rem;
+  text-align: left;
+}
+
+.data-table th {
+  color: #cbd5e1;
+  font-size: 0.84rem;
+  background: rgba(2, 6, 23, 0.65);
+}
+
+.data-table tr:last-child td {
+  border-bottom: none;
+}
+
+.position-badge {
+  display: inline-flex;
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: 999px;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  background: #334155;
+  color: #f8fafc;
+}
+
+.position-badge.gold {
+  background: linear-gradient(145deg, #fde047, #f59e0b);
+  color: #111827;
+}
+
+.position-badge.silver {
+  background: linear-gradient(145deg, #e2e8f0, #94a3b8);
+  color: #0f172a;
+}
+
+.position-badge.bronze {
+  background: linear-gradient(145deg, #fb923c, #92400e);
+}
+
+.export-buttons {
+  display: flex;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+
+.loading {
+  padding: 1rem;
+  color: var(--text-muted);
+}
+
+@media (max-width: 900px) {
+  .data-table {
+    display: block;
+    overflow: auto;
+  }
+}

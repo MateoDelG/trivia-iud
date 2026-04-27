@@ -10,34 +10,51 @@
   <body>
     <div class="noise-overlay" aria-hidden="true"></div>
 
+    <svg class="setup-icon-sprite" aria-hidden="true" style="position:absolute;width:0;height:0;overflow:hidden">
+      <symbol id="setup-icon-logo" viewBox="0 0 24 24"><path d="M4 4h8l-3 7h6l-8 9 2-7H4l4-9z" fill="currentColor"/></symbol>
+      <symbol id="setup-icon-host" viewBox="0 0 24 24"><path d="M3 5h18v12H3V5zm2 2v8h14V7H5zm5 12h4v1h-4v-1z" fill="currentColor"/></symbol>
+      <symbol id="setup-icon-display" viewBox="0 0 24 24"><path d="M4 5h16v10H4V5zm2 2v6h12V7H6zm4 10h4v2h-4v-2z" fill="currentColor"/></symbol>
+      <symbol id="setup-icon-game" viewBox="0 0 24 24"><path d="M7 4h10l3 4v10l-3 2H7l-3-2V8l3-4zm2 5v2h2V9H9zm4 0v2h2V9h-2z" fill="currentColor"/></symbol>
+      <symbol id="setup-icon-controls" viewBox="0 0 24 24"><path d="M12 4c4.4 0 8 3.6 8 8 0 3.2-1.9 5.9-4.7 7.2-.4.2-.8 0-.9-.4l-.5-1.9h-2l-.5 1.9c-.1.4-.5.6-.9.4C5.9 17.9 4 15.2 4 12c0-4.4 3.6-8 8-8zm-3 6H7v2h2v2h2v-2h2v-2h-2V8H9v2z" fill="currentColor"/></symbol>
+      <symbol id="setup-icon-team" viewBox="0 0 24 24"><path d="M16 11a3 3 0 100-6 3 3 0 000 6zm-8 0a3 3 0 100-6 3 3 0 000 6zm0 2c-2.2 0-4 1.2-4 2.7V18h8v-2.3C12 14.2 10.2 13 8 13zm8 0c-.8 0-1.6.2-2.2.5 1 .8 1.6 1.8 1.6 3V18H20v-2.3c0-1.5-1.8-2.7-4-2.7z" fill="currentColor"/></symbol>
+      <symbol id="setup-icon-questions" viewBox="0 0 24 24"><path d="M5 4h14v16H5V4zm2 2v12h10V6H7zm1 3h8v2H8V9zm0 4h8v2H8v-2z" fill="currentColor"/></symbol>
+      <symbol id="setup-icon-theme" viewBox="0 0 24 24"><path d="M12 3l2.4 4.9L20 9l-4 3.9.9 5.6-4.9-2.6-4.9 2.6.9-5.6L4 9l5.6-.1L12 3z" fill="currentColor"/></symbol>
+    </svg>
+
     <div class="app-shell">
-      <header class="topbar">
-        <div class="brand">TriviaMQTT Setup</div>
+      <header class="topbar setup-topbar">
+        <div class="brand setup-brand">
+          <svg class="setup-icon setup-icon-logo"><use href="#setup-icon-logo"></use></svg>
+          <span>TriviaMQTT Setup</span>
+        </div>
         <nav class="nav-links" aria-label="Navegacion principal">
           <a href="/setup" aria-current="page" class="active">Configuracion</a>
           <a href="/host">Host</a>
           <a href="/display">Display</a>
         </nav>
-        <a class="btn btn-primary" href="/host">Ir a partida</a>
+        <a class="btn btn-primary setup-cta" href="/host">
+          <svg class="setup-icon"><use href="#setup-icon-host"></use></svg>
+          <span>Ir a partida</span>
+        </a>
       </header>
 
       <main class="page-container setup-page">
-        <section class="hero animate-fade-up">
+        <section class="hero setup-hero animate-fade-up">
           <span class="badge"><span class="status-dot"></span> Sistema listo para configurar</span>
-        <h1>Configura tu <span class="gradient-text">trivia en vivo</span> con controles MQTT</h1>
-        <p>
-          Define equipos, tiempo de respuesta y banco de preguntas en una sola vista. Los cambios se sincronizan en tiempo real
-          para host y display.
-        </p>
+          <h1>Configura tu <span class="gradient-text">trivia en vivo</span> con controles MQTT</h1>
+          <p>
+            Define equipos, tiempo de respuesta y banco de preguntas en una sola vista. Los cambios se sincronizan en tiempo real
+            para host y display.
+          </p>
           <div class="setup-quick-actions">
-            <a class="btn btn-secondary" href="/host">Ir al panel host</a>
-            <a class="btn btn-secondary" href="/display" target="_blank" rel="noopener">Abrir display</a>
+            <a class="btn btn-secondary" href="/host"><svg class="setup-icon"><use href="#setup-icon-host"></use></svg><span>Ir al panel host</span></a>
+            <a class="btn btn-secondary" href="/display" target="_blank" rel="noopener"><svg class="setup-icon"><use href="#setup-icon-display"></use></svg><span>Abrir display</span></a>
           </div>
         </section>
 
         <section class="setup-grid">
           <section class="card">
-            <h2 class="card-title">Datos de partida</h2>
+            <h2 class="card-title"><svg class="setup-icon"><use href="#setup-icon-game"></use></svg>Datos de partida</h2>
             <div class="form-group">
               <label for="game-name">Nombre de la partida</label>
               <input id="game-name" type="text" placeholder="Trivia IoT" />
@@ -46,6 +63,21 @@
             <div class="form-group">
               <label for="question-time">Tiempo por pregunta (segundos)</label>
               <input id="question-time" type="number" min="5" max="120" step="1" value="20" />
+            </div>
+
+            <h3 class="setup-subtitle"><svg class="setup-icon"><use href="#setup-icon-theme"></use></svg>Apariencia del juego</h3>
+            <div class="form-group">
+              <label for="display-title">Titulo visible en display</label>
+              <input id="display-title" type="text" placeholder="TriviaMQTT" />
+            </div>
+
+            <div class="form-group">
+              <label for="display-theme">Tema visual</label>
+              <select id="display-theme">
+                <option value="dark">Dark</option>
+                <option value="neon">Neon</option>
+                <option value="classic">Classic</option>
+              </select>
             </div>
 
             <div class="form-group">
@@ -66,13 +98,13 @@
           </section>
 
           <section class="card">
-            <h2 class="card-title">Controles detectados</h2>
+            <h2 class="card-title"><svg class="setup-icon"><use href="#setup-icon-controls"></use></svg>Controles detectados</h2>
           <div id="detected-controls" class="list-empty">No hay controles detectados.</div>
           </section>
         </section>
 
         <section class="card">
-          <h2 class="card-title">Equipos</h2>
+          <h2 class="card-title"><svg class="setup-icon"><use href="#setup-icon-team"></use></svg>Equipos</h2>
           <div id="teams-form"></div>
         </section>
 
@@ -82,7 +114,7 @@
         </section>
 
         <section class="card questions-panel">
-          <h2 class="card-title">Banco de preguntas</h2>
+          <h2 class="card-title"><svg class="setup-icon"><use href="#setup-icon-questions"></use></svg>Banco de preguntas</h2>
           <div class="form-group">
             <label for="question-file">Archivo de preguntas (.csv o .xlsx)</label>
             <input id="question-file" type="file" accept=".csv,.xlsx" />

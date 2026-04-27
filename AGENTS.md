@@ -1,38 +1,50 @@
 # AGENTS
 
 ## Active code and boundaries
-- Primary runnable project is `trivia_mqtt/` (FastAPI + MQTT + WebSocket + HTML/CSS/JS).
-- `trivia-control/` is a default PlatformIO scaffold (`src/main.cpp` is placeholder math code), not integrated with the Python app yet.
-- Product intent lives in `TriviaMQTT_Proyecto.md`, but runtime behavior must follow executable code in `trivia_mqtt/app/`.
+- Primary runnable app is `trivia_mqtt/` (FastAPI + MQTT + WebSocket + HTML/CSS/JS).
+- `trivia-control/` is a PlatformIO scaffold and is not integrated with `trivia_mqtt` runtime flow.
 
 ## Verified developer commands
-- Install backend deps from repo root: `venv\Scripts\python.exe -m pip install -r trivia_mqtt\requirements.txt`
-- Run API/UI server from `trivia_mqtt/`: `uvicorn app.main:app --reload`
-- Run control simulator from `trivia_mqtt/`: `python tools/simulate_control.py control_01`
+- Install deps (repo root): `venv\Scripts\python.exe -m pip install -r trivia_mqtt\requirements.txt`
+- Run server (from `trivia_mqtt/`): `uvicorn app.main:app --reload`
+- Run control simulator (from `trivia_mqtt/`): `python tools/simulate_control.py control_01`
 - Required local service: Mosquitto broker on `localhost:1883` (`mosquitto -v`)
-- No automated test/lint/typecheck config is present; validate via manual smoke flow (`/setup`, `/host`, simulator `press`, LED test buttons).
+- No test/lint/typecheck automation is configured; verify with manual smoke flow.
 
-## Architecture contracts (do not break)
-- Keep MQTT I/O isolated in `trivia_mqtt/app/mqtt_client.py`; other modules should use `app_state`/API, not direct MQTT calls.
-- FastAPI lifecycle starts MQTT client in `lifespan`; WebSocket updates are broadcast through `ws_manager`.
-- Live pages are `/setup`, `/host`, and `/display`.
-- Control presence is in-memory only and expires after `CONTROL_STALE_SECONDS = 6` (`app/config.py` + `app/state.py`).
+## Runtime architecture contracts
+- Keep MQTT I/O in `trivia_mqtt/app/mqtt_client.py`; do not publish/subscribe directly from routes or frontend helpers.
+- FastAPI `lifespan` starts MQTT and sets game-engine loop/LED sender wiring.
+- Shared runtime state is in-memory via `app_state` (`app/state.py`); process restart clears game/results history.
+- Control liveness expires via `CONTROL_STALE_SECONDS = 6`.
 
-## Data and protocol contracts
-- MQTT topics in use:
-  - status subscribe: `trivia/controls/+/status`
-  - button subscribe: `trivia/controls/+/button`
-  - led publish: `trivia/controls/{device_id}/led`
-- Expected payloads are JSON; simulator sends `{"device_id": "...", "status": "online|offline"}` and button `{"device_id": "...", "event": "button_pressed"}`.
-- `POST /api/game-config` enforces: non-empty `game_name`, 1-10 teams, unique `control_id`, and every assigned control must be currently detected.
-- WebSocket message types consumed by frontend: `controls_updated`, `events_snapshot`, `event_received`, `game_config_updated`, `teams_updated`, `questions_updated`, `questions_config_updated`, `game_state_updated`.
+## Live routes and result surfaces
+- Primary UI routes: `/setup`, `/host`, `/display`, `/results`.
+- Game state source for UIs is `/api/game/state` + `/ws` broadcasts.
+- Results API exists both split and unified:
+  - unified: `GET /api/results`
+  - split: `GET /api/results/{summary,questions,answers,presses,events}`
+  - CSV export: `GET /api/results/export/{summary,questions,answers,presses,events}.csv`
 
-## Frontend safety constraints
-- `setup.js` persists unsaved form draft in `localStorage` key `trivia_mqtt_setup_draft_v1`; keep this behavior.
-- WebSocket-driven control refresh must not wipe in-progress setup inputs/selections.
-- Clear draft storage only after successful game-config save (current behavior in `saveGameConfig`).
-- Reuse design tokens from `trivia_mqtt/app/static/css/theme.css` (dark palette + semantic colors) instead of redefining per page.
+## Data/protocol contracts
+- MQTT topics:
+  - subscribe status: `trivia/controls/+/status`
+  - subscribe button: `trivia/controls/+/button`
+  - publish LED: `trivia/controls/{device_id}/led`
+- Expected JSON payloads from simulator:
+  - status: `{"device_id":"...","status":"online|offline"}`
+  - button: `{"device_id":"...","event":"button_pressed"}`
+- `POST /api/game-config` requires non-empty `game_name`, 1-10 teams, unique `control_id`, and assigned controls currently detected.
 
-## If you add tooling
-- If tests/lint/typecheck/build are introduced, update this file with exact commands and required execution order.
-- Validate changes via manual smoke flow: start Mosquitto, run server, run simulator, press button, verify LED response.
+## Frontend constraints that are easy to break
+- `setup.js` draft persistence key is `trivia_mqtt_setup_draft_v1`; keep and clear it only after successful config save.
+- In `host.js`, `controlTemplate`, `eventTemplate`, and `teamTemplate` must be defined before render functions run.
+- Host-triggered display/results view switching currently relies on cross-tab signaling in frontend (`localStorage` key `display_view` and listeners in `display.js`/`results.js`).
+- Reuse `app/static/css/theme.css` tokens instead of page-local palette reinvention.
+
+## Manual verification checklist (current source of truth)
+- Start Mosquitto, start server, run at least one simulator.
+- Validate `/setup` config save, `/host` game flow (start -> question -> timer -> answer marking), and `/display` live updates.
+- Validate results at `/results`, `GET /api/results`, and at least one CSV export endpoint.
+
+## If tooling is introduced later
+- If tests/lint/typecheck/build are added, update this file with exact commands and required order.

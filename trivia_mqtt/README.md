@@ -177,3 +177,29 @@ python tools/simulate_control.py control_03
 10. Verificar equipo en turno y cola de pulsaciones.
 11. Marcar `correcta` o `incorrecta` desde `/host`.
 12. Verificar ranking y puntajes actualizados en `/host` y `/display`.
+
+## 10) Experiencia visual en /display (Mision 7)
+
+- `/display` usa una interfaz tipo show con:
+  - pregunta central
+  - opciones A/B/C/D en tarjetas
+  - temporizador grande + barra de progreso
+  - ranking en vivo
+  - pantalla final con equipo ganador
+- Soporte de sonido preparado (si los archivos existen) en:
+  - `app/static/assets/sounds/question_start.mp3`
+  - `app/static/assets/sounds/button_press.mp3`
+  - `app/static/assets/sounds/correct.mp3`
+  - `app/static/assets/sounds/incorrect.mp3`
+  - `app/static/assets/sounds/timeout.mp3`
+  - `app/static/assets/sounds/game_end.mp3`
+- La pantalla no falla si faltan archivos de audio; simplemente omite ese sonido.
+
+## 11) Configuracion visual basica
+
+En `/setup` puedes definir apariencia basica en la partida:
+
+- `display_title`: titulo mostrado en pantalla publica
+- `theme`: `dark`, `neon`, `classic`
+
+Estos campos se guardan en `game_config.visual_config`.

@@ -5,28 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>TriviaMQTT - Resultados</title>
     <link rel="stylesheet" href="/static/css/theme.css" />
-    <style>
-      .results-page { max-width: 1200px; margin: 0 auto; padding: 24px; }
-      .results-header { margin-bottom: 32px; }
-      .results-header h1 { font-size: 2rem; margin-bottom: 8px; }
-      .results-header p { color: var(--text-muted); }
-      .card-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; margin-bottom: 32px; }
-      .stat-card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 20px; }
-      .stat-card h3 { font-size: 0.875rem; color: var(--text-muted); margin-bottom: 8px; }
-      .stat-card .value { font-size: 2rem; font-weight: 700; color: var(--primary); }
-      .stat-card .unit { font-size: 0.875rem; color: var(--text-muted); }
-      .section-title { font-size: 1.25rem; margin-bottom: 16px; }
-      .data-table { width: 100%; border-collapse: collapse; background: var(--surface); border-radius: 8px; overflow: hidden; }
-      .data-table th, .data-table td { padding: 12px 16px; text-align: left; border-bottom: 1px solid var(--border); }
-      .data-table th { background: var(--bg-subtle); font-weight: 600; font-size: 0.875rem; }
-      .data-table tr:last-child td { border-bottom: none; }
-      .position-badge { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 50%; background: var(--primary); color: white; font-weight: 700; font-size: 0.875rem; }
-      .position-badge.gold { background: linear-gradient(135deg, #FFD700, #FFA500); }
-      .position-badge.silver { background: linear-gradient(135deg, #C0C0C0, #A0A0A0); }
-      .position-badge.bronze { background: linear-gradient(135deg, #CD7F32, #8B4513); }
-      .export-buttons { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 24px; padding-top: 24px; border-top: 1px solid var(--border); }
-      .loading { text-align: center; padding: 48px; color: var(--text-muted); }
-    </style>
+    <link rel="stylesheet" href="/static/css/results.css" />
   </head>
   <body>
     <main class="results-page">
@@ -57,7 +36,7 @@
           </div>
         </section>
 
-        <section>
+        <section class="results-section">
           <h2 class="section-title">Ranking Final</h2>
           <table class="data-table">
             <thead>
@@ -75,7 +54,7 @@
           </table>
         </section>
 
-        <section style="margin-top: 32px;">
+        <section class="results-section">
           <h2 class="section-title">Historial de Preguntas</h2>
           <table class="data-table">
             <thead>
@@ -92,7 +71,7 @@
           </table>
         </section>
 
-        <section style="margin-top: 32px;">
+        <section class="results-section">
           <h2 class="section-title">Historial de Respuestas</h2>
           <table class="data-table">
             <thead>
@@ -108,13 +87,15 @@
           </table>
         </section>
 
-        <section class="export-buttons">
+        <section class="results-section">
           <h3 class="section-title">Exportar CSV</h3>
-          <a href="/api/results/export/summary.csv" class="btn btn-secondary" download>Resumen</a>
-          <a href="/api/results/export/questions.csv" class="btn btn-secondary" download>Preguntas</a>
-          <a href="/api/results/export/answers.csv" class="btn btn-secondary" download>Respuestas</a>
-          <a href="/api/results/export/presses.csv" class="btn btn-secondary" download>Pulsaciones</a>
-          <a href="/api/results/export/events.csv" class="btn btn-secondary" download>Eventos</a>
+          <div class="export-buttons">
+            <a href="/api/results/export/summary.csv" class="btn btn-secondary" download>Resumen</a>
+            <a href="/api/results/export/questions.csv" class="btn btn-secondary" download>Preguntas</a>
+            <a href="/api/results/export/answers.csv" class="btn btn-secondary" download>Respuestas</a>
+            <a href="/api/results/export/presses.csv" class="btn btn-secondary" download>Pulsaciones</a>
+            <a href="/api/results/export/events.csv" class="btn btn-secondary" download>Eventos</a>
+          </div>
         </section>
       </div>
     </main>

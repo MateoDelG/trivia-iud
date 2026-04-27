@@ -181,12 +181,16 @@ async def save_game_config(payload: GameConfig) -> dict:
             )
         )
 
+    visual_config = payload.visual_config.model_copy(deep=True)
+    visual_config.display_title = visual_config.display_title.strip() or game_name
+
     saved_config = app_state.set_game_config(
         GameConfig(
             game_name=game_name,
             status="configured",
             question_time=question_time,
             question_mode=app_state.question_mode(),
+            visual_config=visual_config,
             teams=normalized_teams,
         )
     )
@@ -204,6 +208,7 @@ async def save_game_config(payload: GameConfig) -> dict:
             "team_count": len(saved_config.teams),
             "question_time": saved_config.question_time,
             "question_mode": saved_config.question_mode,
+            "visual_config": saved_config.visual_config.model_dump(mode="json"),
         },
         message=f"Partida configurada: {saved_config.game_name}",
     )
@@ -433,7 +438,6 @@ async def set_display_view(request: ViewChangeRequest):
         "type": "view_change",
         "data": {"view": request.view}
     })
-    return {"success": True}
     return {"success": True}
 
 

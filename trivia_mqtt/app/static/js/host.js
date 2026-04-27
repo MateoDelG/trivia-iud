@@ -19,6 +19,13 @@ const teamsListEl = document.getElementById("teams-list");
 const hostActionMessageEl = document.getElementById("host-action-message");
 const hostPopupEl = document.getElementById("host-popup");
 const hostPopupContentEl = document.getElementById("host-popup-content");
+const overviewStateEl = document.getElementById("overview-state");
+const overviewStateSubEl = document.getElementById("overview-state-sub");
+const overviewQuestionEl = document.getElementById("overview-question");
+const overviewRoundSubEl = document.getElementById("overview-round-sub");
+const overviewTeamEl = document.getElementById("overview-team");
+const overviewTimerEl = document.getElementById("overview-timer");
+const overviewTimerSubEl = document.getElementById("overview-timer-sub");
 
 const btnGameStart = document.getElementById("btn-game-start");
 const btnQuestionStart = document.getElementById("btn-question-start");
@@ -103,6 +110,32 @@ function formatDate(dateString) {
   const date = new Date(dateString);
   if (Number.isNaN(date.getTime())) return dateString;
   return date.toLocaleString();
+}
+
+function formatMMSS(totalSeconds) {
+  const safe = Math.max(0, Number(totalSeconds || 0));
+  const minutes = Math.floor(safe / 60)
+    .toString()
+    .padStart(2, "0");
+  const seconds = Math.floor(safe % 60)
+    .toString()
+    .padStart(2, "0");
+  return `${minutes}:${seconds}`;
+}
+
+function statusLabel(status) {
+  const labels = {
+    setup: "Esperando",
+    configured: "Lista",
+    game_running: "En vivo",
+    question_ready: "Pregunta lista",
+    question_active: "Pregunta activa",
+    waiting_for_answer: "Validando",
+    question_finished: "Pregunta cerrada",
+    game_paused: "Pausada",
+    game_finished: "Finalizada",
+  };
+  return labels[status] || status;
 }
 
 function renderControls() {
@@ -256,7 +289,9 @@ function renderTeams(teams) {
 function renderGameState() {
   if (!gameState) return;
 
-  gameStatusEl.textContent = gameState.game_status || "setup";
+  const status = gameState.game_status || "setup";
+  gameStatusEl.textContent = status;
+  gameStatusEl.className = `state-badge status-${status}`;
   gameNameEl.textContent = gameState.game_name ? `Partida: ${gameState.game_name}` : "No hay partida configurada.";
   questionTimeEl.textContent = `Tiempo por pregunta: ${Number(gameState.question_time || 0)} s`;
   questionModeEl.textContent = `Modo de preguntas: ${gameState.question_mode || "ordered"}`;
@@ -282,10 +317,37 @@ function renderGameState() {
   questionTimerEl.textContent = `${Number(gameState.question_remaining_time || 0)} s`;
   currentTeamEl.textContent = `Equipo en turno: ${gameState.current_team?.name || "-"}`;
 
+  if (overviewStateEl) {
+    overviewStateEl.textContent = statusLabel(status);
+    overviewStateSubEl.textContent = gameState.game_pause_reason || stateDescription(status);
+    overviewQuestionEl.textContent = `${qIndex >= 0 ? qIndex + 1 : "-"} / ${qTotal || "-"}`;
+    overviewRoundSubEl.textContent = `Ronda ${qIndex >= 0 ? qIndex + 1 : "-"}`;
+    overviewTeamEl.textContent = gameState.current_team?.name || "Sin turno";
+    overviewTimerEl.textContent = formatMMSS(gameState.question_remaining_time || 0);
+    overviewTimerSubEl.textContent =
+      status === "game_paused"
+        ? "Temporizador pausado"
+        : status === "question_active"
+          ? "Temporizador activo"
+          : "Sin temporizador";
+  }
+
   renderQueue(gameState.press_queue || []);
   renderRanking(gameState.scores || []);
   renderTeams(gameState.teams || []);
   updateButtons();
+}
+
+function stateDescription(status) {
+  if (status === "game_running") return "Partida activa";
+  if (status === "question_ready") return "Esperando temporizador";
+  if (status === "question_active") return "Ronda en curso";
+  if (status === "waiting_for_answer") return "Esperando validacion";
+  if (status === "question_finished") return "Pregunta finalizada";
+  if (status === "game_paused") return "Pausa manual";
+  if (status === "game_finished") return "Partida finalizada";
+  if (status === "configured") return "Lista para iniciar";
+  return "Sin partida";
 }
 
 function getDisconnectedAssignedControls() {
@@ -357,8 +419,7 @@ async function callGameAction(endpoint) {
 
 function toggleDisplayView() {
   currentDisplayView = currentDisplayView === "display" ? "results" : "display";
-  localStorage.setItem("display_view", currentDisplayView);
-  localStorage.removeItem("display_view");
+  localStorage.setItem("display_view", JSON.stringify({ view: currentDisplayView, ts: Date.now() }));
   btnToggleDisplay.textContent = currentDisplayView === "display" ? "Ver resultados" : "Volver a display";
 }
 

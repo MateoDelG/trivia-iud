@@ -94,23 +94,16 @@ async function loadResults() {
 
 loadResults();
 
-const resultsChannel = new BroadcastChannel("display_view_channel");
-resultsChannel.onmessage = (event) => {
-  const view = event.data?.view;
-  if (view === "results") {
-    window.location.href = "/results";
-  } else if (view === "display") {
-    window.location.href = "/display";
-  }
-};
-
 window.addEventListener("storage", (event) => {
-  if (event.key === "display_view") {
-    const view = event.newValue;
-    if (view === "results") {
+  if (event.key !== "display_view" || !event.newValue) return;
+  try {
+    const payload = JSON.parse(event.newValue);
+    if (payload.view === "results") {
       window.location.href = "/results";
-    } else if (view === "display") {
+    } else if (payload.view === "display") {
       window.location.href = "/display";
     }
+  } catch (_) {
+    // ignore malformed payload
   }
 });

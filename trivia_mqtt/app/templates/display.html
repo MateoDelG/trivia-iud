@@ -10,34 +10,75 @@
   <body>
     <div class="noise-overlay" aria-hidden="true"></div>
 
-    <div class="display-shell">
+    <svg class="display-icon-sprite" aria-hidden="true" style="position:absolute;width:0;height:0;overflow:hidden">
+      <symbol id="display-icon-logo" viewBox="0 0 24 24"><path d="M4 4h8l-3 7h6l-8 9 2-7H4l4-9z" fill="currentColor"/></symbol>
+      <symbol id="display-icon-sound" viewBox="0 0 24 24"><path d="M4 9h4l5-4v14l-5-4H4V9zm12.5 3a3.5 3.5 0 01-1.5 2.9v-5.8a3.5 3.5 0 011.5 2.9zm2.5 0a6 6 0 01-3 5.2v-2.1a4 4 0 000-6.2V6.8A6 6 0 0119 12z" fill="currentColor"/></symbol>
+      <symbol id="display-icon-ranking" viewBox="0 0 24 24"><path d="M5 3h2v18H5V3zm6 6h2v12h-2V9zm6-4h2v16h-2V5z" fill="currentColor"/></symbol>
+      <symbol id="display-icon-queue" viewBox="0 0 24 24"><path d="M4 6h16v2H4V6zm0 5h12v2H4v-2zm0 5h16v2H4v-2z" fill="currentColor"/></symbol>
+      <symbol id="display-icon-timer" viewBox="0 0 24 24"><path d="M9 2h6v2H9V2zm3 4a8 8 0 100 16 8 8 0 000-16zm1 4v4.6l3.2 1.9-1 1.7L11 15V10h2z" fill="currentColor"/></symbol>
+      <symbol id="display-icon-trophy" viewBox="0 0 24 24"><path d="M7 3h10v3h3v3c0 2.8-2.2 5-5 5h-1.1A4 4 0 0113 17v2h3v2H8v-2h3v-2a4 4 0 01-2.9-3H7c-2.8 0-5-2.2-5-5V6h3V3zm-3 5v1c0 1.7 1.3 3 3 3h1V8H4zm16 0h-4v4h1c1.7 0 3-1.3 3-3V8z" fill="currentColor"/></symbol>
+    </svg>
+
+    <div class="display-shell" data-theme="dark">
       <main class="display-container">
-        <section class="display-header animate-fade-up">
-          <h1 id="display-game-name" class="display-title">TriviaMQTT</h1>
-          <p id="display-status" class="display-status">Esperando inicio</p>
-      </section>
+        <section class="display-top fade-in">
+          <div class="display-title-group">
+            <div class="display-brand">
+              <svg class="display-icon display-icon-logo"><use href="#display-icon-logo"></use></svg>
+              <span>TriviaMQTT Display</span>
+            </div>
+            <p id="display-event-name" class="display-event">Evento en vivo</p>
+            <h1 id="display-game-name" class="display-title">TriviaMQTT</h1>
+            <p id="display-status" class="display-status">Esperando inicio de partida</p>
+          </div>
+          <div class="display-actions">
+            <button id="sound-toggle-btn" class="btn btn-secondary" type="button">
+              <svg class="display-icon"><use href="#display-icon-sound"></use></svg>
+              <span>Activar sonido</span>
+            </button>
+            <span id="sound-status" class="sound-status">Sonido OFF</span>
+          </div>
+        </section>
 
-        <section class="question-panel">
-        <div id="display-question-index" class="question-index">Pregunta -/-</div>
-        <h2 id="display-question-text" class="question-text">Esperando pregunta...</h2>
-        <div id="display-options" class="options-grid"></div>
-      </section>
+        <section id="waiting-stage" class="stage-panel slide-up">
+          <h2 id="waiting-message">Esperando inicio de partida</h2>
+          <p>El host iniciara la partida cuando todo este listo.</p>
+        </section>
 
-        <section class="display-grid">
-          <section class="timer-panel">
-            <div id="display-timer" class="timer-value">--</div>
-            <div id="display-current-team" class="current-team">Equipo en turno: -</div>
+        <section id="game-stage" class="game-stage hidden">
+          <section class="question-panel slide-up">
+            <div id="display-question-index" class="question-index">Pregunta -/-</div>
+            <h2 id="display-question-text" class="question-text">Esperando pregunta...</h2>
+            <div id="display-options" class="options-grid"></div>
           </section>
 
-          <section class="score-panel">
-            <h3>Ranking</h3>
-            <div id="display-ranking" class="list-empty">Sin puntajes aun.</div>
-          </section>
+          <section class="display-grid">
+            <section class="timer-panel">
+              <h3 class="display-card-title"><svg class="display-icon"><use href="#display-icon-timer"></use></svg>Tiempo restante</h3>
+              <div id="display-timer" class="timer-value">--</div>
+              <div class="timer-track">
+                <div id="display-timer-progress" class="timer-progress"></div>
+              </div>
+              <p id="display-timer-caption" class="timer-caption">Tiempo en curso</p>
+              <div id="display-current-team" class="current-team">Equipo en turno: -</div>
+            </section>
 
-          <section class="times-panel">
-            <h3>Tiempos de respuesta</h3>
-            <div id="display-response-times" class="list-empty">Sin respuestas aun.</div>
+            <section class="score-panel">
+              <h3 class="display-card-title"><svg class="display-icon"><use href="#display-icon-ranking"></use></svg>Ranking en vivo</h3>
+              <div id="display-ranking" class="list-empty">Sin puntajes aun.</div>
+            </section>
+
+            <section class="times-panel">
+              <h3 class="display-card-title"><svg class="display-icon"><use href="#display-icon-queue"></use></svg>Cola de pulsaciones</h3>
+              <div id="display-response-times" class="list-empty">Sin respuestas aun.</div>
+            </section>
           </section>
+        </section>
+
+        <section id="final-stage" class="final-stage hidden">
+          <h2><svg class="display-icon"><use href="#display-icon-trophy"></use></svg>Partida finalizada</h2>
+          <p id="display-winner" class="winner-highlight">Equipo ganador: -</p>
+          <div id="display-final-ranking" class="final-ranking"></div>
         </section>
 
         <div id="display-popup" class="display-popup hidden" role="status" aria-live="polite">

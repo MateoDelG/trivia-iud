@@ -1,5 +1,7 @@
 const gameNameEl = document.getElementById("game-name");
 const questionTimeEl = document.getElementById("question-time");
+const displayTitleEl = document.getElementById("display-title");
+const displayThemeEl = document.getElementById("display-theme");
 const teamCountEl = document.getElementById("team-count");
 const detectedControlsEl = document.getElementById("detected-controls");
 const teamsFormEl = document.getElementById("teams-form");
@@ -31,6 +33,10 @@ let questionsPreview = [];
 let draft = {
   game_name: "",
   question_time: DEFAULT_QUESTION_TIME,
+  visual_config: {
+    display_title: "TriviaMQTT",
+    theme: "dark",
+  },
   team_count: 1,
   teams: [],
 };
@@ -83,6 +89,10 @@ function normalizeDraft(raw) {
   return {
     game_name: raw?.game_name || "",
     question_time: clampQuestionTime(raw?.question_time ?? DEFAULT_QUESTION_TIME),
+    visual_config: {
+      display_title: String(raw?.visual_config?.display_title || raw?.game_name || "TriviaMQTT").trim() || "TriviaMQTT",
+      theme: ["dark", "neon", "classic"].includes(raw?.visual_config?.theme) ? raw.visual_config.theme : "dark",
+    },
     team_count: safeTeamCount,
     teams: normalizedTeams,
   };
@@ -115,6 +125,10 @@ function draftFromConfig(config) {
   return normalizeDraft({
     game_name: config.game_name,
     question_time: config.question_time,
+    visual_config: {
+      display_title: config.visual_config?.display_title || config.game_name || "TriviaMQTT",
+      theme: config.visual_config?.theme || "dark",
+    },
     team_count: config.teams.length,
     teams: config.teams.map((team) => ({
       team_id: team.team_id,
@@ -127,6 +141,10 @@ function draftFromConfig(config) {
 function syncDraftFromForm() {
   draft.game_name = gameNameEl.value;
   draft.question_time = clampQuestionTime(questionTimeEl.value);
+  draft.visual_config = {
+    display_title: (displayTitleEl.value || "").trim() || gameNameEl.value || "TriviaMQTT",
+    theme: displayThemeEl.value,
+  };
   draft.team_count = Number(teamCountEl.value);
   draft.teams = draft.teams.slice(0, draft.team_count);
 
@@ -284,6 +302,10 @@ function collectPayload() {
   return {
     game_name: gameNameEl.value,
     question_time: clampQuestionTime(questionTimeEl.value),
+    visual_config: {
+      display_title: (displayTitleEl.value || "").trim() || gameNameEl.value || "TriviaMQTT",
+      theme: displayThemeEl.value,
+    },
     teams,
   };
 }
@@ -307,6 +329,8 @@ async function saveGameConfig() {
   currentConfig = data.game_config;
   draft = draftFromConfig(currentConfig);
   clearDraftStorage();
+  displayTitleEl.value = draft.visual_config.display_title;
+  displayThemeEl.value = draft.visual_config.theme;
   setMessage("Configuracion guardada correctamente.", "success");
   renderTeamRows();
 }
@@ -451,6 +475,8 @@ async function loadInitialData() {
 
   gameNameEl.value = draft.game_name;
   questionTimeEl.value = String(draft.question_time);
+  displayTitleEl.value = draft.visual_config.display_title;
+  displayThemeEl.value = draft.visual_config.theme;
   teamCountEl.value = String(draft.team_count);
 
   renderDetectedControls();
@@ -483,6 +509,8 @@ function connectWebSocket() {
       }
       gameNameEl.value = draft.game_name;
       questionTimeEl.value = String(draft.question_time);
+      displayTitleEl.value = draft.visual_config.display_title;
+      displayThemeEl.value = draft.visual_config.theme;
       teamCountEl.value = String(draft.team_count);
       renderTeamRows();
       return;
@@ -525,6 +553,16 @@ gameNameEl.addEventListener("input", () => {
 questionTimeEl.addEventListener("change", () => {
   draft.question_time = clampQuestionTime(questionTimeEl.value);
   questionTimeEl.value = String(draft.question_time);
+  saveDraft();
+});
+
+displayTitleEl.addEventListener("input", () => {
+  draft.visual_config.display_title = (displayTitleEl.value || "").trim() || "TriviaMQTT";
+  saveDraft();
+});
+
+displayThemeEl.addEventListener("change", () => {
+  draft.visual_config.theme = displayThemeEl.value;
   saveDraft();
 });
 

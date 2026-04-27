@@ -10,46 +10,150 @@
   <body>
     <div class="noise-overlay" aria-hidden="true"></div>
 
+    <svg class="host-icon-sprite" aria-hidden="true" style="position:absolute;width:0;height:0;overflow:hidden">
+      <symbol id="icon-logo" viewBox="0 0 24 24"><path d="M4 4h8l-3 7h6l-8 9 2-7H4l4-9z" fill="currentColor"/></symbol>
+      <symbol id="icon-display" viewBox="0 0 24 24"><path d="M3 5h18v12H3V5zm2 2v8h14V7H5zm5 12h4v1h-4v-1z" fill="currentColor"/></symbol>
+      <symbol id="icon-results" viewBox="0 0 24 24"><path d="M5 3h2v18H5V3zm6 6h2v12h-2V9zm6-4h2v16h-2V5z" fill="currentColor"/></symbol>
+      <symbol id="icon-status" viewBox="0 0 24 24"><path d="M12 3l8 4v10l-8 4-8-4V7l8-4zm0 2.2L6 8v8l6 2.8 6-2.8V8l-6-2.8zm-1 4.3l5 2.5-5 2.5V9.5z" fill="currentColor"/></symbol>
+      <symbol id="icon-question" viewBox="0 0 24 24"><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10 10-4.5 10-10S17.5 2 12 2zm0 17a1.2 1.2 0 110-2.4A1.2 1.2 0 0112 19zm1.3-5.5v.4h-2v-.7c0-1.4.5-2.1 1.6-2.8.9-.6 1.3-1 1.3-1.8 0-.9-.7-1.5-1.8-1.5-1 0-1.8.5-2.5 1.4L8.5 7.3c1-1.3 2.3-2 4.1-2 2.4 0 4 1.4 4 3.4 0 1.7-.9 2.6-2.2 3.4-.9.6-1.1.9-1.1 1.4z" fill="currentColor"/></symbol>
+      <symbol id="icon-team" viewBox="0 0 24 24"><path d="M16 11a3 3 0 100-6 3 3 0 000 6zm-8 0a3 3 0 100-6 3 3 0 000 6zm0 2c-2.2 0-4 1.2-4 2.7V18h8v-2.3C12 14.2 10.2 13 8 13zm8 0c-.8 0-1.6.2-2.2.5 1 .8 1.6 1.8 1.6 3V18H20v-2.3c0-1.5-1.8-2.7-4-2.7z" fill="currentColor"/></symbol>
+      <symbol id="icon-timer" viewBox="0 0 24 24"><path d="M9 2h6v2H9V2zm3 4a8 8 0 100 16 8 8 0 000-16zm1 4v4.6l3.2 1.9-1 1.7L11 15V10h2z" fill="currentColor"/></symbol>
+      <symbol id="icon-play" viewBox="0 0 24 24"><path d="M8 5v14l11-7L8 5z" fill="currentColor"/></symbol>
+      <symbol id="icon-pause" viewBox="0 0 24 24"><path d="M7 5h4v14H7V5zm6 0h4v14h-4V5z" fill="currentColor"/></symbol>
+      <symbol id="icon-resume" viewBox="0 0 24 24"><path d="M6 5h3v14H6V5zm5 0l8 7-8 7V5z" fill="currentColor"/></symbol>
+      <symbol id="icon-next" viewBox="0 0 24 24"><path d="M5 12l9-7v4h5v6h-5v4l-9-7z" fill="currentColor"/></symbol>
+      <symbol id="icon-skip" viewBox="0 0 24 24"><path d="M5 6l8 6-8 6V6zm9 0l8 6-8 6V6z" fill="currentColor"/></symbol>
+      <symbol id="icon-check" viewBox="0 0 24 24"><path d="M9 16.2L4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4L9 16.2z" fill="currentColor"/></symbol>
+      <symbol id="icon-cross" viewBox="0 0 24 24"><path d="M19 6.4L17.6 5 12 10.6 6.4 5 5 6.4 10.6 12 5 17.6 6.4 19 12 13.4 17.6 19 19 17.6 13.4 12 19 6.4z" fill="currentColor"/></symbol>
+      <symbol id="icon-flag" viewBox="0 0 24 24"><path d="M5 3h2v18H5V3zm4 1h10l-2 4 2 4H9V4z" fill="currentColor"/></symbol>
+    </svg>
+
     <div class="app-shell">
-      <header class="topbar">
-        <div class="brand">TriviaMQTT Host</div>
+      <header class="topbar host-topbar">
+        <div class="brand host-brand">
+          <svg class="icon icon-logo"><use href="#icon-logo"></use></svg>
+          <span>TriviaMQTT Host</span>
+        </div>
         <nav class="nav-links" aria-label="Navegacion principal">
           <a href="/setup">Configuracion</a>
           <a href="/host" aria-current="page" class="active">Host</a>
           <a href="/display">Display</a>
           <a href="/results">Resultados</a>
         </nav>
-        <a class="btn btn-primary" href="/display" target="_blank" rel="noopener">Abrir display</a>
-        <button id="btn-toggle-display" class="btn btn-secondary">Cambiar vista</button>
+        <div class="host-topbar-actions">
+          <a class="btn btn-primary btn-display-open" href="/display" target="_blank" rel="noopener">
+            <svg class="icon"><use href="#icon-display"></use></svg>
+            <span>Abrir display</span>
+          </a>
+          <button id="btn-toggle-display" class="btn btn-secondary btn-display-toggle">
+            <svg class="icon"><use href="#icon-results"></use></svg>
+            <span>Ver resultados</span>
+          </button>
+        </div>
       </header>
 
       <main class="page-container host-page">
-        <section class="hero animate-fade-up">
-          <span class="badge"><span class="status-dot"></span> Control central en tiempo real</span>
-          <h1>Gestiona la <span class="gradient-text">partida en vivo</span> y valida respuestas</h1>
-          <p>Inicia rondas, controla el temporizador, revisa la cola de pulsaciones y lleva el marcador sin perder ritmo.</p>
+        <section class="hero host-hero animate-fade-up">
+          <div class="hero-content">
+            <span class="badge"><span class="status-dot"></span> Control central en tiempo real</span>
+            <h1>Gestiona la <span class="gradient-text">partida en vivo</span></h1>
+            <p>Inicia rondas, controla el temporizador, valida respuestas y lleva el marcador sin perder ritmo.</p>
+          </div>
+
+          <div class="hero-metrics" aria-label="Resumen rapido de partida">
+            <article class="hero-metric-card metric-status">
+              <h3><svg class="icon"><use href="#icon-status"></use></svg>Estado</h3>
+              <p id="overview-state" class="metric-value">-</p>
+              <span id="overview-state-sub" class="metric-sub">Sin partida</span>
+            </article>
+            <article class="hero-metric-card metric-question">
+              <h3><svg class="icon"><use href="#icon-question"></use></svg>Pregunta actual</h3>
+              <p id="overview-question" class="metric-value">- / -</p>
+              <span id="overview-round-sub" class="metric-sub">Ronda -</span>
+            </article>
+            <article class="hero-metric-card metric-team">
+              <h3><svg class="icon"><use href="#icon-team"></use></svg>Equipo en turno</h3>
+              <p id="overview-team" class="metric-value">-</p>
+              <span class="metric-sub">En turno</span>
+            </article>
+            <article class="hero-metric-card metric-timer">
+              <h3><svg class="icon"><use href="#icon-timer"></use></svg>Tiempo restante</h3>
+              <p id="overview-timer" class="metric-value">00:00</p>
+              <span id="overview-timer-sub" class="metric-sub">Sin temporizador</span>
+            </article>
+          </div>
         </section>
 
         <section class="host-layout">
           <section class="left-column">
             <section class="card" id="controls-panel">
               <h2 class="card-title">Controles de juego</h2>
-              <div class="game-actions">
-                <button id="btn-game-start" class="primary">Iniciar partida</button>
-                <button id="btn-question-start" class="btn-secondary">Iniciar siguiente pregunta</button>
-                <button id="btn-timer-start" class="btn-secondary">Iniciar temporizador</button>
-                <button id="btn-game-pause" class="btn-secondary">Pausar partida</button>
-                <button id="btn-game-resume" class="btn-secondary">Reanudar partida</button>
-                <button id="btn-answer-correct" class="primary">Marcar correcta</button>
-                <button id="btn-answer-incorrect" class="btn-secondary">Marcar incorrecta</button>
-                <button id="btn-question-skip" class="btn-secondary">Saltar pregunta</button>
-                <button id="btn-game-end" class="danger">Finalizar partida</button>
+              <div class="actions-board">
+                <article class="action-group-card">
+                  <h3 class="action-group-title">Acciones principales</h3>
+                  <div class="game-actions game-actions-primary">
+                    <button id="btn-game-start" class="primary btn-action">
+                      <svg class="icon"><use href="#icon-play"></use></svg>
+                      <span>Iniciar partida</span>
+                    </button>
+                    <button id="btn-game-pause" class="btn-secondary btn-action">
+                      <svg class="icon"><use href="#icon-pause"></use></svg>
+                      <span>Pausar partida</span>
+                    </button>
+                    <button id="btn-game-resume" class="btn-secondary btn-action">
+                      <svg class="icon"><use href="#icon-resume"></use></svg>
+                      <span>Reanudar partida</span>
+                    </button>
+                  </div>
+                </article>
+
+                <article class="action-group-card">
+                  <h3 class="action-group-title">Flujo de preguntas</h3>
+                  <div class="game-actions game-actions-flow">
+                    <button id="btn-question-start" class="btn-secondary btn-action">
+                      <svg class="icon"><use href="#icon-next"></use></svg>
+                      <span>Iniciar siguiente pregunta</span>
+                    </button>
+                    <button id="btn-timer-start" class="btn-secondary btn-action">
+                      <svg class="icon"><use href="#icon-timer"></use></svg>
+                      <span>Iniciar temporizador</span>
+                    </button>
+                    <button id="btn-question-skip" class="btn-secondary btn-action">
+                      <svg class="icon"><use href="#icon-skip"></use></svg>
+                      <span>Saltar pregunta</span>
+                    </button>
+                  </div>
+                </article>
+
+                <article class="action-group-card">
+                  <h3 class="action-group-title">Validar respuesta</h3>
+                  <div class="game-actions game-actions-validation">
+                    <button id="btn-answer-correct" class="primary btn-action">
+                      <svg class="icon"><use href="#icon-check"></use></svg>
+                      <span>Marcar correcta</span>
+                    </button>
+                    <button id="btn-answer-incorrect" class="btn-secondary btn-action">
+                      <svg class="icon"><use href="#icon-cross"></use></svg>
+                      <span>Marcar incorrecta</span>
+                    </button>
+                  </div>
+                </article>
+
+                <article class="action-group-card action-group-danger">
+                  <h3 class="action-group-title">Finalizar</h3>
+                  <div class="game-actions game-actions-danger">
+                    <button id="btn-game-end" class="danger btn-action">
+                      <svg class="icon"><use href="#icon-flag"></use></svg>
+                      <span>Finalizar partida</span>
+                    </button>
+                  </div>
+                </article>
               </div>
               <div id="host-action-message" class="list-empty">Sin acciones ejecutadas.</div>
             </section>
 
             <section class="card" id="question-panel">
-              <h2 class="card-title">Pregunta actual</h2>
+              <h2 class="card-title"><svg class="icon"><use href="#icon-question"></use></svg>Pregunta actual</h2>
               <div id="question-index" class="list-empty">Pregunta -/-</div>
               <h3 id="question-text" class="list-empty">Sin pregunta activa.</h3>
               <div id="question-options" class="question-options"></div>
@@ -59,7 +163,7 @@
             </section>
 
             <section class="card" id="queue-panel">
-              <h2 class="card-title">Turno y cola de pulsaciones</h2>
+              <h2 class="card-title"><svg class="icon"><use href="#icon-team"></use></svg>Turno y cola de pulsaciones</h2>
               <div id="current-team" class="list-empty">Equipo en turno: -</div>
               <ol id="press-queue" class="press-queue list-empty"></ol>
             </section>
@@ -67,7 +171,7 @@
 
           <section class="right-column">
             <section class="card" id="game-state-panel">
-              <h2 class="card-title">Estado de partida</h2>
+              <h2 class="card-title"><svg class="icon"><use href="#icon-status"></use></svg>Estado de partida</h2>
               <div id="game-status" class="state-badge">setup</div>
               <div id="game-name" class="list-empty">No hay partida configurada.</div>
               <div id="question-time" class="list-empty">Tiempo por pregunta: -</div>
@@ -77,7 +181,7 @@
             </section>
 
             <section class="card" id="ranking-panel">
-              <h2 class="card-title">Ranking</h2>
+              <h2 class="card-title"><svg class="icon"><use href="#icon-results"></use></svg>Ranking</h2>
               <div id="ranking-list" class="list-empty">Sin puntajes aun.</div>
             </section>
 

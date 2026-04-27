@@ -34,11 +34,17 @@ class Team(BaseModel):
     is_active: bool = True
 
 
+class VisualConfig(BaseModel):
+    display_title: str = "TriviaMQTT"
+    theme: Literal["dark", "neon", "classic"] = "dark"
+
+
 class GameConfig(BaseModel):
     game_name: str
     status: str = "configured"
     question_time: int = 20
     question_mode: Literal["ordered", "random"] = "ordered"
+    visual_config: VisualConfig = Field(default_factory=VisualConfig)
     teams: List[Team]
 
 

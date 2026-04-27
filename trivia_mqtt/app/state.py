@@ -120,6 +120,7 @@ class AppState:
                 status="configured",
                 question_time=config.question_time,
                 question_mode=config.question_mode,
+                visual_config=config.visual_config,
                 teams=normalized_teams,
             )
             self._question_mode = config.question_mode
@@ -450,6 +451,7 @@ class AppState:
             return {
                 "game_status": self._game_status,
                 "game_name": game_config.game_name if game_config else None,
+                "visual_config": game_config.visual_config.model_dump(mode="json") if game_config else None,
                 "question_time": game_config.question_time if game_config else 20,
                 "question_remaining_time": self._question_remaining_time,
                 "current_question_index": self._current_question_index,
