@@ -8,6 +8,10 @@ const totalPressesEl = document.getElementById("total-presses");
 const rankingTableEl = document.getElementById("ranking-table");
 const questionsTableEl = document.getElementById("questions-table");
 const answersTableEl = document.getElementById("answers-table");
+const persistedStatusCardEl = document.getElementById("persisted-status-card");
+const persistedStatusMessageEl = document.getElementById("persisted-status-message");
+const historyLinkEl = document.getElementById("history-link");
+const historyXlsxLinkEl = document.getElementById("history-xlsx-link");
 
 async function loadResults() {
   try {
@@ -27,6 +31,22 @@ async function loadResults() {
 
     totalQuestionsEl.textContent = data.questions?.total || 0;
     totalPressesEl.textContent = data.presses?.total || 0;
+
+    const gameUid = data.game_uid || null;
+    const isPersisted = Boolean(data.is_persisted);
+    persistedStatusCardEl.style.display = "grid";
+    if (isPersisted && gameUid) {
+      persistedStatusMessageEl.textContent = `Partida guardada en SQLite (game_uid: ${gameUid}).`;
+      persistedStatusMessageEl.className = "message-success";
+      historyLinkEl.style.display = "inline-flex";
+      historyXlsxLinkEl.style.display = "inline-flex";
+      historyXlsxLinkEl.href = `/api/history/games/${encodeURIComponent(gameUid)}/export/full.xlsx`;
+    } else {
+      persistedStatusMessageEl.textContent = "Partida aun no guardada en SQLite.";
+      persistedStatusMessageEl.className = "message-error";
+      historyLinkEl.style.display = "inline-flex";
+      historyXlsxLinkEl.style.display = "none";
+    }
 
     if (ranking.length === 0) {
       rankingTableEl.innerHTML = "<tr><td colspan='7'>No hay resultados disponibles</td></tr>";

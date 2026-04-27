@@ -139,3 +139,13 @@ class TeamResult(BaseModel):
     incorrect_answers: int
     total_presses: int
     average_press_time: float
+
+
+class ScoreAdjustmentRecord(BaseModel):
+    timestamp: datetime
+    team_id: str
+    team_name: str
+    previous_score: int
+    delta: int
+    new_score: int
+    reason: str = "manual"

@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>TriviaMQTT - Historial</title>
+    <link rel="stylesheet" href="/static/css/theme.css" />
+    <link rel="stylesheet" href="/static/css/history.css" />
+  </head>
+  <body>
+    <div class="noise-overlay" aria-hidden="true"></div>
+
+    <div class="app-shell history-nav-shell">
+      <header class="topbar">
+        <div class="brand">TriviaMQTT Historial</div>
+        <nav class="nav-links" aria-label="Navegacion principal">
+          <a href="/setup">Configuracion</a>
+          <a href="/host">Host</a>
+          <a href="/display">Display</a>
+          <a href="/results">Resultados</a>
+          <a href="/history" aria-current="page" class="active">Historial</a>
+        </nav>
+      </header>
+    </div>
+
+    <main class="history-page">
+      <section class="history-header">
+        <h1>Historial de partidas</h1>
+        <p>Consulta partidas guardadas en SQLite y exporta reportes historicos.</p>
+      </section>
+
+      <section class="history-card">
+        <h2>Partidas guardadas</h2>
+        <div class="table-wrap">
+          <table class="history-table">
+            <thead>
+              <tr>
+                <th>Partida</th>
+                <th>Inicio</th>
+                <th>Fin</th>
+                <th>Preguntas</th>
+                <th>Ganador</th>
+                <th>Acciones</th>
+              </tr>
+            </thead>
+            <tbody id="history-games-body">
+              <tr>
+                <td colspan="6" class="list-empty">Cargando historial...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section id="history-detail" class="history-card hidden">
+        <h2 id="history-detail-title">Detalle de partida</h2>
+        <div id="history-detail-summary" class="history-summary"></div>
+
+        <div class="history-detail-grid">
+          <article>
+            <h3>Equipos</h3>
+            <div id="history-teams" class="list-empty">Sin datos.</div>
+          </article>
+          <article>
+            <h3>Preguntas</h3>
+            <div id="history-questions" class="list-empty">Sin datos.</div>
+          </article>
+          <article>
+            <h3>Respuestas</h3>
+            <div id="history-answers" class="list-empty">Sin datos.</div>
+          </article>
+          <article>
+            <h3>Pulsaciones</h3>
+            <div id="history-presses" class="list-empty">Sin datos.</div>
+          </article>
+        </div>
+      </section>
+    </main>
+
+    <script src="/static/js/history.js"></script>
+  </body>
+</html>

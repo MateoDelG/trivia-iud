@@ -6,6 +6,11 @@
   gap: 1.2rem;
 }
 
+.results-nav-shell {
+  min-height: auto;
+  padding-bottom: 0;
+}
+
 .results-header {
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 1.2rem;
@@ -61,6 +66,10 @@
   padding: 0.9rem;
   display: grid;
   gap: 0.7rem;
+}
+
+.persisted-status-card p {
+  margin: 0;
 }
 
 .data-table {

@@ -4,14 +4,17 @@ import asyncio
 import tempfile
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
+from io import BytesIO
 from pathlib import Path
 
 from fastapi import FastAPI, File, HTTPException, Request, UploadFile, WebSocket, WebSocketDisconnect
 from fastapi.responses import HTMLResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
+from openpyxl import Workbook
 from pydantic import BaseModel
 
+from app.database import DB_PATH, delete_game, export_game_xlsx, get_game_detail, init_db, list_games
 from app.game_engine import game_engine
 from app.models import EventRecord, GameConfig, LedCommandRequest, QuestionModeRequest, Team
 from app.mqtt_client import mqtt_service
@@ -51,6 +54,8 @@ async def _presence_watchdog() -> None:
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    init_db()
+    print(f"[db] SQLite ready: {DB_PATH}")
     mqtt_service.set_loop(asyncio.get_running_loop())
     game_engine.set_loop(asyncio.get_running_loop())
     game_engine.set_led_sender(mqtt_service.publish_led_command)
@@ -90,6 +95,11 @@ async def display_page(request: Request):
 @app.get("/results", response_class=HTMLResponse)
 async def results_page(request: Request):
     return templates.TemplateResponse("results.html", {"request": request})
+
+
+@app.get("/history", response_class=HTMLResponse)
+async def history_page(request: Request):
+    return templates.TemplateResponse("history.html", {"request": request})
 
 
 @app.get("/api/controls")
@@ -483,6 +493,8 @@ async def get_all_results():
         "game_name": app_state.game_config().game_name if app_state.game_config() else None,
         "game_started_at": app_state.game_started_at().isoformat() if app_state.game_started_at() else None,
         "game_finished_at": app_state.game_finished_at().isoformat() if app_state.game_finished_at() else None,
+        "game_uid": app_state.game_uid(),
+        "is_persisted": app_state.is_persisted(),
         "game_status": app_state.game_status(),
         "final_ranking": [r.model_dump() for r in ranking],
         "questions": {
@@ -511,6 +523,8 @@ async def get_results_summary():
             "game_name": app_state.game_config().game_name if app_state.game_config() else None,
             "game_started_at": app_state.game_started_at().isoformat() if app_state.game_started_at() else None,
             "game_finished_at": app_state.game_finished_at().isoformat() if app_state.game_finished_at() else None,
+            "game_uid": app_state.game_uid(),
+            "is_persisted": app_state.is_persisted(),
             "final_ranking": [],
         }
     final_ranking = app_state.finalize_game()
@@ -518,6 +532,8 @@ async def get_results_summary():
         "game_name": app_state.game_config().game_name if app_state.game_config() else None,
         "game_started_at": app_state.game_started_at().isoformat() if app_state.game_started_at() else None,
         "game_finished_at": app_state.game_finished_at().isoformat() if app_state.game_finished_at() else None,
+        "game_uid": app_state.game_uid(),
+        "is_persisted": app_state.is_persisted(),
         "final_ranking": [r.model_dump() for r in final_ranking],
     }
 
@@ -558,6 +574,57 @@ async def get_results_events():
     }
 
 
+@app.get("/api/history/games")
+async def get_history_games():
+    try:
+        return {"games": list_games()}
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"No se pudo consultar historial: {exc}") from exc
+
+
+@app.get("/api/history/games/{game_uid}")
+async def get_history_game_detail(game_uid: str):
+    try:
+        detail = get_game_detail(game_uid)
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"No se pudo consultar partida: {exc}") from exc
+
+    if detail is None:
+        raise HTTPException(status_code=404, detail="No existe una partida con ese game_uid")
+    return detail
+
+
+@app.delete("/api/history/games/{game_uid}")
+async def delete_history_game(game_uid: str):
+    try:
+        deleted = delete_game(game_uid)
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"No se pudo eliminar partida: {exc}") from exc
+
+    if not deleted:
+        raise HTTPException(status_code=404, detail="No existe una partida con ese game_uid")
+    return {"success": True, "message": "Partida eliminada", "game_uid": game_uid}
+
+
+@app.get("/api/history/games/{game_uid}/export/full.xlsx")
+async def export_history_game_xlsx(game_uid: str):
+    try:
+        data = export_game_xlsx(game_uid)
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Error al exportar Excel: {exc}") from exc
+
+    async def iter_xlsx():
+        yield data
+
+    return StreamingResponse(
+        iter_xlsx(),
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": f"attachment; filename=trivia_history_{game_uid}.xlsx"},
+    )
+
+
 def _build_csv_response(rows: list[dict], filename: str) -> StreamingResponse:
     if not rows:
         csv_content = "No data available"
@@ -579,11 +646,73 @@ def _build_csv_response(rows: list[dict], filename: str) -> StreamingResponse:
     )
 
 
+def _build_xlsx_bytes(sheets: dict[str, list[dict]]) -> bytes:
+    wb = Workbook()
+    first_sheet = True
+
+    for sheet_name, rows in sheets.items():
+        ws = wb.active if first_sheet else wb.create_sheet(title=sheet_name)
+        ws.title = sheet_name
+        first_sheet = False
+
+        if not rows:
+            ws.append(["Sin datos"])
+            continue
+
+        headers = list(rows[0].keys())
+        ws.append(headers)
+        for row in rows:
+            ws.append([row.get(header) for header in headers])
+
+    stream = BytesIO()
+    wb.save(stream)
+    stream.seek(0)
+    return stream.read()
+
+
 @app.get("/api/results/export/summary.csv")
 async def export_summary_csv():
     ranking = app_state.finalize_game() if app_state.game_status() == "game_finished" else []
     rows = [r.model_dump() for r in ranking]
     return _build_csv_response(rows, "trivia_summary.csv")
+
+
+@app.get("/api/results/export/full.xlsx")
+async def export_full_xlsx():
+    ranking = app_state.finalize_game() if app_state.game_status() == "game_finished" else []
+    questions = app_state.question_history()
+    answers = app_state.answer_history()
+    presses = app_state.press_history()
+    events = app_state.events()
+
+    summary = {
+        "game_name": app_state.game_config().game_name if app_state.game_config() else None,
+        "game_status": app_state.game_status(),
+        "game_uid": app_state.game_uid(),
+        "is_persisted": app_state.is_persisted(),
+        "game_started_at": app_state.game_started_at().isoformat() if app_state.game_started_at() else None,
+        "game_finished_at": app_state.game_finished_at().isoformat() if app_state.game_finished_at() else None,
+    }
+
+    data = _build_xlsx_bytes(
+        {
+            "Resumen": [summary],
+            "Ranking": [r.model_dump(mode="json") for r in ranking],
+            "Preguntas": [q.model_dump(mode="json") for q in questions],
+            "Respuestas": [a.model_dump(mode="json") for a in answers],
+            "Pulsaciones": [p.model_dump(mode="json") for p in presses],
+            "Eventos": [e.model_dump(mode="json") for e in events],
+        }
+    )
+
+    async def iter_xlsx():
+        yield data
+
+    return StreamingResponse(
+        iter_xlsx(),
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": "attachment; filename=trivia_results_full.xlsx"},
+    )
 
 
 @app.get("/api/results/export/questions.csv")

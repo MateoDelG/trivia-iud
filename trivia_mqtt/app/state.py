@@ -4,6 +4,7 @@ from collections import deque
 from datetime import datetime, timezone
 from threading import Lock
 from typing import Dict, List, Optional
+from uuid import uuid4
 
 from app.config import CONTROL_STALE_SECONDS, MAX_EVENTS
 from app.models import (
@@ -15,6 +16,7 @@ from app.models import (
     PressRecord,
     Question,
     QuestionRecord,
+    ScoreAdjustmentRecord,
     Team,
     TeamResult,
 )
@@ -54,6 +56,9 @@ class AppState:
         self._question_history: List[QuestionRecord] = []
         self._game_started_at: Optional[datetime] = None
         self._game_finished_at: Optional[datetime] = None
+        self._game_uid: Optional[str] = None
+        self._is_persisted: bool = False
+        self._score_adjustments: List[ScoreAdjustmentRecord] = []
 
     @staticmethod
     def _now() -> datetime:
@@ -227,6 +232,9 @@ class AppState:
             self._press_history = []
             self._answer_history = []
             self._question_history = []
+            self._score_adjustments = []
+            self._game_uid = str(uuid4())
+            self._is_persisted = False
             if self._game_config is not None:
                 self._game_config = self._game_config.model_copy(update={"status": "game_running"})
                 reset_teams = [
@@ -464,6 +472,8 @@ class AppState:
                 "scores": [team.model_dump(mode="json") for team in ranking],
                 "question_mode": self._question_mode,
                 "game_finished": self._game_finished,
+                "game_uid": self._game_uid,
+                "is_persisted": self._is_persisted,
                 "question_finished": self._question_finished,
                 "questions_loaded": self._questions_loaded,
                 "total_bank_questions": self._total_questions,
@@ -521,6 +531,9 @@ class AppState:
         self._revealed_correct_answer = None
         self._game_pause_reason = None
         self._paused_from_status = None
+        self._game_uid = None
+        self._is_persisted = False
+        self._score_adjustments = []
 
     def add_press_record(self, record: PressRecord) -> None:
         with self._lock:
@@ -567,7 +580,8 @@ class AppState:
         press_history = list(self._press_history)
         
         with self._lock:
-            self._game_finished_at = now
+            if self._game_finished_at is None:
+                self._game_finished_at = now
 
             if self._game_config is None:
                 return []
@@ -602,6 +616,22 @@ class AppState:
             r.position = idx + 1
 
         return results
+
+    def game_uid(self) -> Optional[str]:
+        with self._lock:
+            return self._game_uid
+
+    def is_persisted(self) -> bool:
+        with self._lock:
+            return self._is_persisted
+
+    def mark_persisted(self, persisted: bool = True) -> None:
+        with self._lock:
+            self._is_persisted = persisted
+
+    def score_adjustments(self) -> List[ScoreAdjustmentRecord]:
+        with self._lock:
+            return [item.model_copy(deep=True) for item in self._score_adjustments]
 
 
 app_state = AppState()

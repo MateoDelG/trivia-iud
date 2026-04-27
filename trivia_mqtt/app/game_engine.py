@@ -9,6 +9,15 @@ from typing import Any, Callable, Optional
 
 from fastapi import HTTPException
 
+from app.database import (
+    finalize_game as finalize_game_db,
+    insert_answer,
+    insert_press,
+    update_question_result,
+    upsert_game_start,
+    upsert_question_start,
+    upsert_teams_snapshot,
+)
 from app.models import AnswerRecord, ButtonPress, EventRecord, PressRecord, QuestionRecord
 from app.state import app_state
 from app.websocket_manager import ws_manager
@@ -49,6 +58,143 @@ class GameEngine:
             detail=f"Accion bloqueada: control desconectado ({control_id} / {team_name})",
         )
 
+    def _ranked_teams_snapshot(self) -> list[dict]:
+        ranking = app_state.finalize_game() if app_state.game_status() == "game_finished" else []
+        if ranking:
+            return [item.model_dump() for item in ranking]
+
+        teams = app_state.teams()
+        sorted_teams = sorted(
+            teams,
+            key=lambda item: (-item.score, -item.correct_answers, item.incorrect_answers, item.name.lower()),
+        )
+        return [
+            {
+                "position": index + 1,
+                "team_id": team.team_id,
+                "team_name": team.name,
+                "control_id": team.control_id,
+                "score": team.score,
+                "correct_answers": team.correct_answers,
+                "incorrect_answers": team.incorrect_answers,
+                "total_presses": team.total_presses,
+                "average_press_time": 0.0,
+            }
+            for index, team in enumerate(sorted_teams)
+        ]
+
+    def _persist_game_start(self) -> str | None:
+        game_uid = app_state.game_uid()
+        config = app_state.game_config()
+        if not game_uid or config is None:
+            return "No hay game_uid/configuracion para persistir"
+
+        try:
+            upsert_game_start(
+                game_uid=game_uid,
+                game_name=config.game_name,
+                question_mode=config.question_mode,
+                question_time=config.question_time,
+                started_at=app_state.game_started_at().isoformat() if app_state.game_started_at() else None,
+                total_questions=app_state.prepared_questions_total(),
+            )
+            upsert_teams_snapshot(game_uid, self._ranked_teams_snapshot())
+            app_state.mark_persisted(True)
+            return None
+        except Exception as exc:
+            app_state.mark_persisted(False)
+            return str(exc)
+
+    def _persist_question_started(self) -> str | None:
+        game_uid = app_state.game_uid()
+        question = app_state.current_question()
+        if not game_uid or question is None:
+            return "No hay game_uid/pregunta para persistir"
+
+        try:
+            upsert_question_start(
+                game_uid,
+                {
+                    "question_id": question.question_id,
+                    "question_text": question.text,
+                    "option_a": question.option_a,
+                    "option_b": question.option_b,
+                    "option_c": question.option_c,
+                    "option_d": question.option_d,
+                    "correct_answer": question.correct_answer,
+                    "points": question.points,
+                    "category": question.category,
+                    "difficulty": question.difficulty,
+                    "feedback": question.explanation or question.feedback,
+                    "started_at": app_state.question_started_at().isoformat() if app_state.question_started_at() else None,
+                },
+            )
+            return None
+        except Exception as exc:
+            app_state.mark_persisted(False)
+            return str(exc)
+
+    def _persist_press_record(self, record: PressRecord) -> None:
+        game_uid = app_state.game_uid()
+        if not game_uid:
+            return
+        try:
+            insert_press(
+                game_uid,
+                {
+                    "question_id": record.question_id,
+                    "team_id": record.team_id,
+                    "team_name": record.team_name,
+                    "control_id": record.control_id,
+                    "elapsed_time": record.elapsed_time,
+                    "press_order": record.press_order,
+                    "timestamp": record.timestamp.isoformat() if record.timestamp else None,
+                },
+            )
+        except Exception:
+            app_state.mark_persisted(False)
+
+    def _persist_answer_record(self, record: AnswerRecord) -> None:
+        game_uid = app_state.game_uid()
+        if not game_uid:
+            return
+        try:
+            insert_answer(
+                game_uid,
+                {
+                    "question_id": record.question_id,
+                    "team_id": record.team_id,
+                    "team_name": record.team_name,
+                    "control_id": record.control_id,
+                    "result": record.result,
+                    "points_awarded": record.points_awarded,
+                    "elapsed_time": record.elapsed_time,
+                    "timestamp": record.timestamp.isoformat() if record.timestamp else None,
+                },
+            )
+        except Exception:
+            app_state.mark_persisted(False)
+
+    def _persist_question_result(self, record: QuestionRecord) -> None:
+        game_uid = app_state.game_uid()
+        if not game_uid:
+            return
+        try:
+            update_question_result(
+                game_uid,
+                {
+                    "question_id": record.question_id,
+                    "final_result": record.final_result,
+                    "answered_by_team_id": record.answered_by_team_id,
+                    "answered_by_team_name": record.answered_by_team_name,
+                    "points_awarded": record.points_awarded,
+                    "finished_at": record.finished_at.isoformat() if record.finished_at else None,
+                },
+            )
+            upsert_teams_snapshot(game_uid, self._ranked_teams_snapshot())
+        except Exception:
+            app_state.mark_persisted(False)
+
     async def start_game(self) -> dict:
         config = app_state.game_config()
         if config is None:
@@ -68,6 +214,7 @@ class GameEngine:
 
         await self._cancel_timer()
         app_state.prepare_game(prepared_questions)
+        persistence_error = self._persist_game_start()
 
         event = EventRecord(
             timestamp=datetime.now(timezone.utc),
@@ -85,6 +232,9 @@ class GameEngine:
             "message": "Partida iniciada",
             "game_status": app_state.game_status(),
             "total_questions": len(prepared_questions),
+            "game_uid": app_state.game_uid(),
+            "is_persisted": app_state.is_persisted(),
+            "persistence_error": persistence_error,
         }
 
     async def start_next_question(self) -> dict:
@@ -96,6 +246,8 @@ class GameEngine:
         question = app_state.start_next_question()
         if question is None:
             return await self.end_game(message="Partida finalizada: no hay mas preguntas")
+
+        persistence_error = self._persist_question_started()
 
         await self._cancel_timer()
 
@@ -119,6 +271,7 @@ class GameEngine:
             "current_question_index": app_state.current_question_index(),
             "current_question": question.model_dump(mode="json"),
             "question_time": app_state.game_runtime_snapshot()["question_time"],
+            "persistence_error": persistence_error,
         }
 
     async def start_question_timer(self) -> dict:
@@ -256,7 +409,7 @@ class GameEngine:
                     press_elapsed = press.elapsed_time
                     break
 
-        app_state.add_answer_record(AnswerRecord(
+        answer_record = AnswerRecord(
             question_id=current_question.question_id,
             question_text=current_question.text,
             team_id=current_team.team_id,
@@ -266,9 +419,11 @@ class GameEngine:
             points_awarded=points_to_add,
             elapsed_time=press_elapsed,
             timestamp=datetime.now(timezone.utc)
-        ))
+        )
+        app_state.add_answer_record(answer_record)
+        self._persist_answer_record(answer_record)
 
-        app_state.add_question_record(QuestionRecord(
+        question_record = QuestionRecord(
             question_id=current_question.question_id,
             question_text=current_question.text,
             correct_answer=current_question.correct_answer,
@@ -282,7 +437,9 @@ class GameEngine:
             answered_by_team_id=current_team.team_id,
             answered_by_team_name=current_team.name,
             points_awarded=points_to_add
-        ))
+        )
+        app_state.add_question_record(question_record)
+        self._persist_question_result(question_record)
 
         if updated_team is not None:
             self._send_led(updated_team.control_id, "on")
@@ -336,7 +493,7 @@ class GameEngine:
                 press_elapsed = press.elapsed_time
                 break
 
-        app_state.add_answer_record(AnswerRecord(
+        answer_record = AnswerRecord(
             question_id=current_question.question_id,
             question_text=current_question.text,
             team_id=current_team.team_id,
@@ -346,7 +503,16 @@ class GameEngine:
             points_awarded=0,
             elapsed_time=press_elapsed,
             timestamp=datetime.now(timezone.utc)
-        ))
+        )
+        app_state.add_answer_record(answer_record)
+        self._persist_answer_record(answer_record)
+
+        game_uid = app_state.game_uid()
+        if game_uid:
+            try:
+                upsert_teams_snapshot(game_uid, self._ranked_teams_snapshot())
+            except Exception:
+                app_state.mark_persisted(False)
 
         next_team = app_state.next_team_from_queue()
         if next_team is not None:
@@ -377,7 +543,7 @@ class GameEngine:
         await self._send_led_all_assigned("on")
         app_state.reveal_correct_answer(current_question.correct_answer)
 
-        app_state.add_question_record(QuestionRecord(
+        question_record = QuestionRecord(
             question_id=current_question.question_id,
             question_text=current_question.text,
             correct_answer=current_question.correct_answer,
@@ -391,7 +557,9 @@ class GameEngine:
             answered_by_team_id=None,
             answered_by_team_name=None,
             points_awarded=0
-        ))
+        )
+        app_state.add_question_record(question_record)
+        self._persist_question_result(question_record)
 
         event = EventRecord(
             timestamp=datetime.now(timezone.utc),
@@ -416,8 +584,27 @@ class GameEngine:
         }
 
     async def skip_question(self) -> dict:
-        if app_state.current_question() is None:
+        current_question = app_state.current_question()
+        if current_question is None:
             raise HTTPException(status_code=400, detail="No hay pregunta activa")
+
+        question_record = QuestionRecord(
+            question_id=current_question.question_id,
+            question_text=current_question.text,
+            correct_answer=current_question.correct_answer,
+            points=current_question.points,
+            category=current_question.category,
+            difficulty=current_question.difficulty,
+            started_at=app_state.question_started_at(),
+            finished_at=datetime.now(timezone.utc),
+            attempts=len(app_state.press_queue()),
+            final_result="skipped",
+            answered_by_team_id=None,
+            answered_by_team_name=None,
+            points_awarded=0,
+        )
+        app_state.add_question_record(question_record)
+        self._persist_question_result(question_record)
 
         app_state.finish_question()
         await self._cancel_timer()
@@ -438,6 +625,36 @@ class GameEngine:
     async def end_game(self, message: str = "Partida finalizada") -> dict:
         app_state.finish_game()
         final_ranking = app_state.finalize_game()
+        ranking_payload = [r.model_dump() for r in final_ranking]
+
+        persisted = app_state.is_persisted()
+        persistence_error = None
+        config = app_state.game_config()
+        game_uid = app_state.game_uid()
+        if game_uid and config is not None:
+            try:
+                upsert_game_start(
+                    game_uid=game_uid,
+                    game_name=config.game_name,
+                    question_mode=config.question_mode,
+                    question_time=config.question_time,
+                    started_at=app_state.game_started_at().isoformat() if app_state.game_started_at() else None,
+                    total_questions=app_state.prepared_questions_total(),
+                )
+                upsert_teams_snapshot(game_uid, ranking_payload)
+                finalize_game_db(
+                    game_uid=game_uid,
+                    finished_at=app_state.game_finished_at().isoformat() if app_state.game_finished_at() else None,
+                    total_questions=app_state.prepared_questions_total(),
+                    winner_team_name=ranking_payload[0]["team_name"] if ranking_payload else None,
+                )
+                app_state.mark_persisted(True)
+                persisted = True
+            except Exception as exc:
+                app_state.mark_persisted(False)
+                persisted = False
+                persistence_error = str(exc)
+
         await self._cancel_timer()
         await self._send_led_all_assigned("blink_slow")
 
@@ -446,7 +663,12 @@ class GameEngine:
             device_id="server",
             event_type="game_finished",
             topic="internal/game/end",
-            payload={"ranking": [r.model_dump() for r in final_ranking]},
+            payload={
+                "ranking": ranking_payload,
+                "game_uid": app_state.game_uid(),
+                "is_persisted": persisted,
+                "persistence_error": persistence_error,
+            },
             message=message,
         )
         app_state.add_event(event)
@@ -455,7 +677,10 @@ class GameEngine:
             "success": True,
             "message": message,
             "game_status": app_state.game_status(),
-            "ranking": [r.model_dump() for r in final_ranking],
+            "ranking": ranking_payload,
+            "game_uid": app_state.game_uid(),
+            "is_persisted": persisted,
+            "persistence_error": persistence_error,
         }
 
     def handle_button_press(self, device_id: str, topic: str, payload: dict[str, Any]) -> EventRecord:
@@ -555,7 +780,7 @@ class GameEngine:
         self._send_led(device_id, "blink_fast")
 
         press_order = len(app_state.press_history()) + 1
-        app_state.add_press_record(PressRecord(
+        press_record = PressRecord(
             question_id=current_question.question_id,
             question_text=current_question.text,
             team_id=team.team_id,
@@ -564,7 +789,9 @@ class GameEngine:
             elapsed_time=round(elapsed_time, 2),
             press_order=press_order,
             timestamp=datetime.now(timezone.utc)
-        ))
+        )
+        app_state.add_press_record(press_record)
+        self._persist_press_record(press_record)
 
         return EventRecord(
             timestamp=datetime.now(timezone.utc),
@@ -638,6 +865,23 @@ class GameEngine:
 
             app_state.reveal_correct_answer(current_question.correct_answer)
             app_state.finish_question()
+            question_record = QuestionRecord(
+                question_id=current_question.question_id,
+                question_text=current_question.text,
+                correct_answer=current_question.correct_answer,
+                points=current_question.points,
+                category=current_question.category,
+                difficulty=current_question.difficulty,
+                started_at=app_state.question_started_at(),
+                finished_at=datetime.now(timezone.utc),
+                attempts=0,
+                final_result="timeout_no_answers",
+                answered_by_team_id=None,
+                answered_by_team_name=None,
+                points_awarded=0,
+            )
+            app_state.add_question_record(question_record)
+            self._persist_question_result(question_record)
             await self._send_led_all_assigned("on")
             event = EventRecord(
                 timestamp=datetime.now(timezone.utc),

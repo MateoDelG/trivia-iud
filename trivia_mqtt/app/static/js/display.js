@@ -1,13 +1,17 @@
 const gameNameEl = document.getElementById("display-game-name");
 const eventNameEl = document.getElementById("display-event-name");
 const statusEl = document.getElementById("display-status");
+const statusPillEl = document.getElementById("display-status-pill");
+const questionProgressPillEl = document.getElementById("display-question-progress-pill");
 const waitingStageEl = document.getElementById("waiting-stage");
 const waitingMessageEl = document.getElementById("waiting-message");
 const gameStageEl = document.getElementById("game-stage");
 const finalStageEl = document.getElementById("final-stage");
 const questionIndexEl = document.getElementById("display-question-index");
+const questionMetaEl = document.getElementById("display-question-meta");
 const questionTextEl = document.getElementById("display-question-text");
 const optionsEl = document.getElementById("display-options");
+const timerCardEl = document.getElementById("timer-card");
 const timerEl = document.getElementById("display-timer");
 const timerProgressEl = document.getElementById("display-timer-progress");
 const timerCaptionEl = document.getElementById("display-timer-caption");
@@ -19,10 +23,9 @@ const finalRankingEl = document.getElementById("display-final-ranking");
 const popupEl = document.getElementById("display-popup");
 const popupContentEl = document.getElementById("display-popup-content");
 const soundToggleBtnEl = document.getElementById("sound-toggle-btn");
-const soundStatusEl = document.getElementById("sound-status");
 
 const displayShellEl = document.querySelector(".display-shell");
-const questionPanelEl = document.querySelector(".question-panel");
+const questionCardEl = document.querySelector(".question-show-card");
 
 const SOUND_STORAGE_KEY = "trivia_mqtt_sound_enabled";
 const VIEW_STORAGE_KEY = "display_view";
@@ -44,29 +47,36 @@ let lastScoresSnapshot = "";
 let lastProcessedEventToken = "";
 let lastOptionsSignature = "";
 let lastPressQueueSignature = "";
+let lastStatusForSound = "";
 let soundEnabled = false;
 
 const audioCache = {};
 
-function stateMessage(status) {
-  if (status === "setup") return "Esperando configuracion";
-  if (status === "configured") return "Partida lista";
+function publicStatus(status) {
+  if (status === "setup") return "Esperando inicio de partida";
+  if (status === "configured") return "Partida lista para iniciar";
   if (status === "game_running") return "Esperando pulsacion";
-  if (status === "question_ready") return "Pregunta en juego";
+  if (status === "question_ready") return "Pregunta preparada";
   if (status === "question_active") return "Pregunta activa";
-  if (status === "waiting_for_answer") return "Equipo en turno";
-  if (status === "game_paused") return "Temporizador pausado";
+  if (status === "waiting_for_answer") return "Esperando validacion";
   if (status === "question_finished") return "Pregunta finalizada";
+  if (status === "game_paused") return "Partida en pausa";
   if (status === "game_finished") return "Partida finalizada";
   return "Esperando inicio de partida";
 }
 
+function statusTone(status) {
+  if (status === "question_active" || status === "waiting_for_answer") return "active";
+  if (status === "question_ready" || status === "game_running") return "waiting";
+  if (status === "game_paused") return "warning";
+  if (status === "game_finished") return "finished";
+  if (status === "question_finished") return "success";
+  return "waiting";
+}
+
 function updateSoundUI() {
-  soundStatusEl.textContent = soundEnabled ? "Sonido ON" : "Sonido OFF";
-  const label = soundToggleBtnEl.querySelector("span");
-  if (label) {
-    label.textContent = soundEnabled ? "Sonido: ON" : "Activar sonido";
-  }
+  const label = soundEnabled ? "Sonido: ON" : "Sonido: OFF";
+  soundToggleBtnEl.querySelector("span:last-child").textContent = label;
 }
 
 function tryPlaySound(name) {
@@ -82,12 +92,11 @@ function tryPlaySound(name) {
   const audio = audioCache[name];
   audio.currentTime = 0;
   audio.play().catch(() => {
-    // ignore missing file or autoplay block
+    // ignore missing files or blocked autoplay
   });
 }
 
-function showPopup(message, type = "info", durationMs = 3000) {
-  if (!popupEl || !popupContentEl) return;
+function showPopup(message, type = "info", durationMs = 2600) {
   popupContentEl.textContent = message;
   popupContentEl.className = `display-popup-content ${type}`;
   popupEl.classList.remove("hidden");
@@ -106,15 +115,38 @@ function applyTheme() {
   displayShellEl.dataset.theme = theme;
 }
 
-function updateTitles() {
+function updateTitleBand() {
   const displayTitle = gameState?.visual_config?.display_title || gameState?.game_name || "TriviaMQTT";
   gameNameEl.textContent = displayTitle;
   eventNameEl.textContent = gameState?.game_name || "Evento en vivo";
+
+  const status = gameState?.game_status || "setup";
+  const text = publicStatus(status);
+  statusEl.textContent = text;
+  statusPillEl.textContent = text;
+  statusPillEl.className = "status-pill";
+
+  const tone = statusTone(status);
+  if (tone === "active" || tone === "success") {
+    statusPillEl.classList.add("status-pill-active");
+  }
+  if (tone === "warning") {
+    statusPillEl.classList.add("warning");
+  }
+  if (tone === "finished") {
+    statusPillEl.classList.add("error");
+  }
+}
+
+function updateQuestionProgressPill() {
+  const index = Number(gameState?.current_question_index ?? -1);
+  const total = Number(gameState?.total_questions ?? 0);
+  const questionNumber = index >= 0 ? index + 1 : "-";
+  questionProgressPillEl.textContent = `Pregunta ${questionNumber} de ${total || "-"}`;
 }
 
 function toggleStages(status) {
-  const waitingStatuses = ["setup", "configured"];
-  if (waitingStatuses.includes(status)) {
+  if (["setup", "configured"].includes(status)) {
     waitingStageEl.classList.remove("hidden");
     gameStageEl.classList.add("hidden");
     finalStageEl.classList.add("hidden");
@@ -134,6 +166,22 @@ function toggleStages(status) {
   finalStageEl.classList.add("hidden");
 }
 
+function renderQuestionMeta(question) {
+  questionMetaEl.innerHTML = "";
+  if (!question) return;
+
+  const chips = [];
+  if (question.category) chips.push([question.category, false]);
+  if (question.difficulty) chips.push([question.difficulty, true]);
+
+  chips.forEach(([label, alt]) => {
+    const chip = document.createElement("span");
+    chip.className = `question-chip${alt ? " is-alt" : ""}`;
+    chip.textContent = label;
+    questionMetaEl.appendChild(chip);
+  });
+}
+
 function renderOptions(question) {
   const signature = JSON.stringify({
     id: question?.question_id || null,
@@ -143,6 +191,7 @@ function renderOptions(question) {
     d: question?.option_d || "",
     revealed: Boolean(gameState?.answer_revealed),
     revealedAnswer: gameState?.revealed_correct_answer || null,
+    status: gameState?.game_status || "setup",
   });
   if (signature === lastOptionsSignature) return;
   lastOptionsSignature = signature;
@@ -159,17 +208,25 @@ function renderOptions(question) {
     ["C", question.option_c],
     ["D", question.option_d],
   ];
-
+  const answerRevealed = Boolean(gameState?.answer_revealed && gameState?.question_finished);
   const revealedAnswer = gameState?.revealed_correct_answer || null;
-  const answerRevealed = Boolean(gameState?.answer_revealed);
 
   options.forEach(([letter, text]) => {
     const option = document.createElement("article");
-    option.className = "option-item fade-in";
-    if (answerRevealed && revealedAnswer === letter) {
-      option.classList.add("option-correct", "correct-flash");
+    option.className = `option-card option-${letter.toLowerCase()} fade-in`;
+
+    if (answerRevealed) {
+      if (revealedAnswer === letter) {
+        option.classList.add("correct", "correct-flash");
+      } else {
+        option.classList.add("disabled");
+      }
     }
-    option.innerHTML = `<strong>${letter}</strong><span>${text || "-"}</span>`;
+
+    option.innerHTML = `
+      <span class="option-letter">${letter}</span>
+      <span class="option-text">${text || "-"}</span>
+    `;
     optionsEl.appendChild(option);
   });
 }
@@ -181,64 +238,130 @@ function renderRanking(scores) {
     return;
   }
 
-  const snapshot = JSON.stringify(scores.map((team) => ({ id: team.team_id, score: team.score })));
-  const animate = snapshot !== lastScoresSnapshot;
+  const normalized = scores.map((team, index) => ({
+    position: index + 1,
+    team_name: team.team_name || team.name || "Equipo",
+    score: Number(team.score || 0),
+  }));
+
+  const snapshot = JSON.stringify(normalized);
+  const changed = snapshot !== lastScoresSnapshot;
   lastScoresSnapshot = snapshot;
 
   rankingEl.className = "ranking-list";
-  rankingEl.innerHTML = scores
+  rankingEl.innerHTML = normalized
     .map((team, index) => {
-      const rowClass = ["ranking-row", index === 0 ? "leader" : "", animate ? "score-updated" : ""]
+      const classes = ["ranking-item", index === 0 ? "ranking-leader" : "", changed ? "slide-up" : ""]
         .filter(Boolean)
         .join(" ");
-      return `<div class="${rowClass}"><span>${index + 1}. ${team.name}</span><span>${team.score} pts</span></div>`;
+      return `
+        <div class="${classes}">
+          <span class="ranking-position">${team.position}</span>
+          <span class="ranking-team">${team.team_name}</span>
+          <span class="ranking-score">${team.score} pts</span>
+        </div>
+      `;
     })
     .join("");
 }
 
 function renderResponseTimes(pressQueue) {
-  const signature = JSON.stringify(
-    (pressQueue || []).map((press) => ({
-      team_id: press.team_id,
-      team_name: press.team_name,
-      elapsed_time: Number(press.elapsed_time || 0),
-    }))
-  );
+  const normalized = (pressQueue || []).map((press) => ({
+    team_name: press.team_name || "Equipo",
+    elapsed_time: Number(press.elapsed_time || 0),
+  }));
+  const signature = JSON.stringify(normalized);
   if (signature === lastPressQueueSignature) return;
   lastPressQueueSignature = signature;
 
-  if (!pressQueue || pressQueue.length === 0) {
-    responseTimesEl.className = "list-empty";
-    responseTimesEl.textContent = "Sin respuestas aun.";
+  if (normalized.length === 0) {
+    responseTimesEl.className = "queue-empty";
+    responseTimesEl.innerHTML = `
+      <span class="queue-empty-icon" aria-hidden="true">Q</span>
+      <span>Sin pulsaciones registradas</span>
+    `;
     return;
   }
 
-  const sortedPresses = [...pressQueue].sort((a, b) => Number(a.elapsed_time || 0) - Number(b.elapsed_time || 0));
-  responseTimesEl.className = "response-times-list";
-  responseTimesEl.innerHTML = sortedPresses
-    .map((press, index) => `${index + 1}. ${press.team_name} - ${Number(press.elapsed_time || 0).toFixed(2)} s`)
-    .join("<br />");
+  const sorted = [...normalized].sort((a, b) => a.elapsed_time - b.elapsed_time);
+  responseTimesEl.className = "queue-list";
+  responseTimesEl.innerHTML = sorted
+    .map(
+      (press, index) => `
+        <div class="queue-item">
+          <span class="queue-order">${index + 1}.</span>
+          <span class="queue-team">${press.team_name}</span>
+          <span class="queue-time">${press.elapsed_time.toFixed(2)} s</span>
+        </div>
+      `
+    )
+    .join("");
 }
 
 function renderTimer() {
-  const remaining = Number(gameState?.question_remaining_time || 0);
-  const total = Number(gameState?.question_time || 20);
-  const safeTotal = total > 0 ? total : 20;
-  const ratio = Math.max(0, Math.min(1, remaining / safeTotal));
+  const status = gameState?.game_status || "setup";
+  const remaining = Math.max(0, Number(gameState?.question_remaining_time || 0));
+  const total = Math.max(1, Number(gameState?.question_time || 20));
+  const ratio = Math.max(0, Math.min(1, remaining / total));
 
   timerEl.textContent = `${remaining}s`;
   timerProgressEl.style.width = `${ratio * 100}%`;
 
-  timerProgressEl.classList.remove("timer-warning");
-  timerEl.classList.remove("timer-warning");
-  if (remaining <= 5 && gameState?.game_status === "question_active") {
-    timerProgressEl.classList.add("timer-warning");
-    timerEl.classList.add("timer-warning");
-    timerCaptionEl.textContent = "Ultimos segundos";
-  } else if (remaining === 0 && ["question_active", "waiting_for_answer"].includes(gameState?.game_status)) {
+  timerCardEl.classList.remove("timer-warning", "timer-danger", "timer-paused", "warning-pulse");
+
+  if (status === "game_paused") {
+    timerCardEl.classList.add("timer-paused");
+    timerCaptionEl.textContent = "Tiempo pausado";
+    return;
+  }
+
+  if (status === "question_finished") {
+    timerCaptionEl.textContent = "Pregunta finalizada";
+    return;
+  }
+
+  if (remaining <= 0 && ["question_active", "waiting_for_answer", "question_ready"].includes(status)) {
+    timerCardEl.classList.add("timer-danger");
     timerCaptionEl.textContent = "Tiempo agotado";
-  } else {
-    timerCaptionEl.textContent = "Tiempo en curso";
+    return;
+  }
+
+  if (remaining <= 5 && remaining > 0 && status === "question_active") {
+    timerCardEl.classList.add("timer-warning", "warning-pulse");
+    timerCaptionEl.textContent = "Ultimos segundos";
+    return;
+  }
+
+  timerCaptionEl.textContent = "Tiempo en curso";
+}
+
+function renderCurrentTeam() {
+  const team = gameState?.current_team || null;
+  const status = gameState?.game_status || "setup";
+  const canRespond = ["game_running", "question_ready", "question_active", "waiting_for_answer", "question_finished"].includes(status);
+  currentTeamEl.classList.remove("current-team-active", "neon-pulse", "waiting-team");
+
+  if (!team || !team.name) {
+    currentTeamEl.textContent = "Responde: esperando pulsacion";
+    if (canRespond) {
+      statusEl.textContent = "Responde: esperando pulsacion";
+    }
+    currentTeamEl.classList.add("waiting-team");
+    lastCurrentTeamId = null;
+    return;
+  }
+
+  currentTeamEl.textContent = `Responde: ${team.name}`;
+  if (canRespond) {
+    statusEl.textContent = `Responde: ${team.name}`;
+  }
+  currentTeamEl.classList.add("current-team-active");
+
+  if (team.team_id !== lastCurrentTeamId) {
+    currentTeamEl.classList.remove("neon-pulse");
+    void currentTeamEl.offsetWidth;
+    currentTeamEl.classList.add("neon-pulse");
+    lastCurrentTeamId = team.team_id;
   }
 }
 
@@ -249,27 +372,25 @@ function renderFinalScreen(scores) {
     return;
   }
 
-  const winner = scores[0];
-  winnerEl.textContent = `Equipo ganador: ${winner.name}`;
-  finalRankingEl.innerHTML = scores
-    .map((team, index) => {
-      const winnerClass = index === 0 ? "winner-highlight" : "";
-      return `<div class="final-ranking-row ${winnerClass}"><span>${index + 1}. ${team.name}</span><strong>${team.score} pts</strong></div>`;
-    })
+  const normalized = scores.map((team, index) => ({
+    position: index + 1,
+    team_name: team.team_name || team.name || "Equipo",
+    score: Number(team.score || 0),
+  }));
+  const winner = normalized[0];
+
+  winnerEl.textContent = `Equipo ganador: ${winner.team_name}`;
+  finalRankingEl.innerHTML = normalized
+    .map(
+      (team, index) => `
+        <div class="final-ranking-item ${index === 0 ? "winner" : ""}">
+          <span class="ranking-position">${team.position}</span>
+          <span class="ranking-team">${team.team_name}</span>
+          <span class="ranking-score">${team.score} pts</span>
+        </div>
+      `
+    )
     .join("");
-}
-
-function renderCurrentTeam() {
-  const teamName = gameState?.current_team?.name || "-";
-  currentTeamEl.textContent = `Responde: ${teamName}`;
-
-  const teamId = gameState?.current_team?.team_id || null;
-  if (teamId && teamId !== lastCurrentTeamId) {
-    currentTeamEl.classList.remove("team-active");
-    void currentTeamEl.offsetWidth;
-    currentTeamEl.classList.add("team-active");
-    lastCurrentTeamId = teamId;
-  }
 }
 
 function maybePlayStateSounds(status) {
@@ -280,12 +401,14 @@ function maybePlayStateSounds(status) {
     lastQuestionId = currentQuestionId;
   }
 
-  if (status === "game_finished") {
+  if (status === "game_finished" && lastStatusForSound !== "game_finished") {
     tryPlaySound("game_end");
   }
+  lastStatusForSound = status;
 }
 
 function maybeShowStatePopup() {
+  const status = gameState?.game_status;
   if (!gameState || !gameState.current_question) return;
   if (!gameState.answer_revealed || !gameState.question_finished) return;
 
@@ -294,13 +417,13 @@ function maybeShowStatePopup() {
 
   const answer = gameState.revealed_correct_answer || gameState.current_question.correct_answer;
   if (gameState.current_team) {
-    showPopup(`¡Respuesta correcta! ${gameState.current_team.name} (${answer})`, "success", 3500);
-    questionPanelEl.classList.remove("incorrect-flash");
-    questionPanelEl.classList.add("correct-flash");
-  } else {
-    showPopup(`Respuesta incorrecta. Correcta: ${answer}`, "warning", 3500);
-    questionPanelEl.classList.remove("correct-flash");
-    questionPanelEl.classList.add("incorrect-flash");
+    showPopup(`Respuesta correcta: ${gameState.current_team.name} (${answer})`, "success", 3200);
+    questionCardEl.classList.remove("incorrect-flash");
+    questionCardEl.classList.add("correct-flash");
+  } else if (status === "question_finished") {
+    showPopup(`Respuesta revelada: ${answer}`, "warning", 3000);
+    questionCardEl.classList.remove("correct-flash");
+    questionCardEl.classList.add("incorrect-flash");
   }
 
   lastPopupQuestionId = questionId;
@@ -310,31 +433,31 @@ function renderState() {
   if (!gameState) return;
 
   applyTheme();
-  updateTitles();
+  updateTitleBand();
+  updateQuestionProgressPill();
 
   const status = gameState.game_status || "setup";
-  statusEl.textContent = stateMessage(status);
+  displayShellEl.dataset.state = status;
   toggleStages(status);
-
   maybePlayStateSounds(status);
-
-  if (status === "game_paused") {
-    showPopup(`Temporizador pausado: ${gameState.game_pause_reason || "Pausa manual"}`, "warning", 2800);
-  }
 
   const index = Number(gameState.current_question_index ?? -1);
   const total = Number(gameState.total_questions ?? 0);
   questionIndexEl.textContent = `Pregunta ${index >= 0 ? index + 1 : "-"}/${total || "-"}`;
   questionTextEl.textContent = gameState.current_question?.text || "Esperando pregunta...";
 
-  renderOptions(gameState.current_question);
+  renderQuestionMeta(gameState.current_question || null);
+  renderOptions(gameState.current_question || null);
   renderTimer();
   renderCurrentTeam();
   renderRanking(gameState.scores || []);
   renderResponseTimes(gameState.press_queue || []);
   renderFinalScreen(gameState.scores || []);
-
   maybeShowStatePopup();
+
+  if (status === "game_paused") {
+    showPopup(`Partida pausada: ${gameState.game_pause_reason || "Pausa manual"}`, "warning", 2400);
+  }
 }
 
 function processEventEffects(eventData) {
@@ -352,7 +475,7 @@ function processEventEffects(eventData) {
 
   if (eventData.event_type === "answer_correct") {
     const teamName = eventData.team_name || "Equipo";
-    showPopup(`¡Respuesta correcta! ${teamName}`, "success", 2600);
+    showPopup(`Respuesta correcta: ${teamName}`, "success", 2600);
     tryPlaySound("correct");
     return;
   }
@@ -364,7 +487,7 @@ function processEventEffects(eventData) {
   }
 
   if (eventData.event_type === "question_timeout_no_answers") {
-    showPopup("Tiempo agotado", "warning", 2500);
+    showPopup("Tiempo agotado", "warning", 2400);
     tryPlaySound("timeout");
   }
 }
@@ -389,7 +512,6 @@ function connectWebSocket() {
 
     if (message.type === "event_received") {
       processEventEffects(message.data || null);
-      return;
     }
   };
 
@@ -407,7 +529,7 @@ function initializeSoundToggle() {
     window.localStorage.setItem(SOUND_STORAGE_KEY, soundEnabled ? "1" : "0");
     updateSoundUI();
     if (soundEnabled) {
-      showPopup("Sonido activado", "success", 1400);
+      showPopup("Sonido activado", "success", 1200);
     }
   });
 }

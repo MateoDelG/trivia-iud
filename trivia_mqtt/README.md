@@ -203,3 +203,21 @@ En `/setup` puedes definir apariencia basica en la partida:
 - `theme`: `dark`, `neon`, `classic`
 
 Estos campos se guardan en `game_config.visual_config`.
+
+## 12) Persistencia e historial
+
+- La base de datos SQLite se crea automaticamente en:
+  - `data/database/trivia.db`
+- Las partidas se juegan en memoria durante la ejecucion normal.
+- Cuando la partida finaliza (`game_finished`), se guarda automaticamente un snapshot completo en SQLite.
+- Historial disponible en:
+  - `http://localhost:8000/history`
+
+Endpoints de historial:
+
+- `GET /api/history/games`
+- `GET /api/history/games/{game_uid}`
+- `DELETE /api/history/games/{game_uid}`
+- `GET /api/history/games/{game_uid}/export/full.xlsx`
+
+La exportacion historica (`.xlsx`) se genera desde SQLite (no desde estado en memoria).

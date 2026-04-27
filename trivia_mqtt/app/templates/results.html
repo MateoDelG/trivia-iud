@@ -8,10 +8,32 @@
     <link rel="stylesheet" href="/static/css/results.css" />
   </head>
   <body>
+    <div class="app-shell results-nav-shell">
+      <header class="topbar">
+        <div class="brand">TriviaMQTT Resultados</div>
+        <nav class="nav-links" aria-label="Navegacion principal">
+          <a href="/setup">Configuracion</a>
+          <a href="/host">Host</a>
+          <a href="/display">Display</a>
+          <a href="/results" aria-current="page" class="active">Resultados</a>
+          <a href="/history">Historial</a>
+        </nav>
+      </header>
+    </div>
+
     <main class="results-page">
       <section class="results-header">
         <h1>Resultados de la Partida</h1>
         <p id="game-name">Cargando...</p>
+      </section>
+
+      <section id="persisted-status-card" class="results-section persisted-status-card" style="display:none;">
+        <h2 class="section-title">Persistencia</h2>
+        <p id="persisted-status-message" class="list-empty">Estado de guardado</p>
+        <div class="export-buttons">
+          <a id="history-link" class="btn btn-secondary" href="/history" style="display:none;">Ver en historial</a>
+          <a id="history-xlsx-link" class="btn btn-secondary" href="#" style="display:none;">Descargar Excel historico</a>
+        </div>
       </section>
 
       <div id="loading" class="loading">Cargando resultados...</div>
@@ -88,9 +110,10 @@
         </section>
 
         <section class="results-section">
-          <h3 class="section-title">Exportar CSV</h3>
+          <h3 class="section-title">Exportar datos</h3>
           <div class="export-buttons">
-            <a href="/api/results/export/summary.csv" class="btn btn-secondary" download>Resumen</a>
+            <a href="/api/results/export/full.xlsx" class="btn btn-secondary" download>Completo XLSX</a>
+            <a href="/api/results/export/summary.csv" class="btn btn-secondary" download>Resumen CSV</a>
             <a href="/api/results/export/questions.csv" class="btn btn-secondary" download>Preguntas</a>
             <a href="/api/results/export/answers.csv" class="btn btn-secondary" download>Respuestas</a>
             <a href="/api/results/export/presses.csv" class="btn btn-secondary" download>Pulsaciones</a>
