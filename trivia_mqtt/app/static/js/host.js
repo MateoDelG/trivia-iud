@@ -19,6 +19,7 @@ const teamsListEl = document.getElementById("teams-list");
 const hostActionMessageEl = document.getElementById("host-action-message");
 const hostPopupEl = document.getElementById("host-popup");
 const hostPopupContentEl = document.getElementById("host-popup-content");
+const hostPopupBackdropEl = document.getElementById("host-popup-backdrop");
 const overviewStateEl = document.getElementById("overview-state");
 const overviewStateSubEl = document.getElementById("overview-state-sub");
 const overviewQuestionEl = document.getElementById("overview-question");
@@ -58,51 +59,61 @@ function setActionMessage(text, type = "info") {
   else hostActionMessageEl.classList.add("host-alert-info");
 }
 
-function showHostPopup(message) {
-  if (!hostPopupEl || !hostPopupContentEl) return;
+function showHostPopup(message, type = "warning") {
+  if (!hostPopupEl || !hostPopupContentEl || !hostPopupBackdropEl) return;
   hostPopupContentEl.textContent = message;
+  hostPopupContentEl.className = `host-popup-content ${type}`;
   hostPopupEl.classList.remove("hidden");
+  hostPopupBackdropEl.classList.remove("hidden");
 
   if (hostPopupTimeout) {
     window.clearTimeout(hostPopupTimeout);
   }
   hostPopupTimeout = window.setTimeout(() => {
     hostPopupEl.classList.add("hidden");
+    hostPopupBackdropEl.classList.add("hidden");
   }, 3600);
 }
 
 function isActiveGameStatus(status) {
-  return ["game_running", "question_ready", "question_active", "waiting_for_answer", "question_finished"].includes(
+  return ["game_running", "question_ready", "question_active", "waiting_for_answer", "question_finished", "game_paused"].includes(
     status
   );
 }
 
 function maybeShowControlStatusPopup(eventData) {
-  if (!eventData || eventData.event_type !== "status_update") return;
-  const status = String(eventData.payload?.status || "").toLowerCase();
+  if (!eventData) return;
+  const eventType = String(eventData.event_type || "").toLowerCase();
+  if (!["status_update", "control_online", "control_offline"].includes(eventType)) return;
+
+  let status = String(eventData.payload?.status || "").toLowerCase();
+  if (!status) {
+    if (eventType === "control_online") status = "online";
+    if (eventType === "control_offline") status = "offline";
+  }
   if (!status || (status !== "offline" && status !== "online")) return;
 
   const gameStatus = gameState?.game_status || "setup";
-  if (!isActiveGameStatus(gameStatus)) return;
+  const canNotify = isActiveGameStatus(gameStatus);
 
   const deviceId = eventData.device_id || eventData.payload?.device_id || "control";
   const prevStatus = controlPrevStatus.get(deviceId);
 
   if (status === "offline") {
-    if (prevStatus === "online") {
+    if (canNotify && prevStatus === "online") {
       const team = (gameState?.teams || []).find((item) => item.control_id === deviceId);
       const teamSuffix = team ? ` (${formatTeamName(team.name)})` : "";
-      showHostPopup(`Control desconectado: ${deviceId}${teamSuffix}`);
+      showHostPopup(`Control desconectado: ${deviceId}${teamSuffix}`, "error");
     }
     controlPrevStatus.set(deviceId, "offline");
     return;
   }
 
   if (status === "online") {
-    if (prevStatus === "offline") {
+    if (canNotify && prevStatus === "offline") {
       const team = (gameState?.teams || []).find((item) => item.control_id === deviceId);
       const teamSuffix = team ? ` (${formatTeamName(team.name)})` : "";
-      showHostPopup(`Control reconectado: ${deviceId}${teamSuffix}`);
+      showHostPopup(`Control reconectado: ${deviceId}${teamSuffix}`, "success");
     }
     controlPrevStatus.set(deviceId, "online");
   }
@@ -523,9 +534,25 @@ function updateButtons() {
     return;
   }
 
-  if (isPaused && gameState?.game_pause_reason) {
-    setActionMessage(`Partida pausada: ${gameState.game_pause_reason}`, "error");
+  if (isPaused) {
+    const pauseReason = String(gameState?.game_pause_reason || "").trim();
+    const pauseByDisconnect = /control\s+desconectado/i.test(pauseReason);
+
+    if (pauseByDisconnect && !hasDisconnectedAssigned) {
+      setActionMessage("Control reconectado: ahora puedes reanudar", "info");
+      return;
+    }
+
+    if (pauseReason) {
+      setActionMessage(`Partida pausada: ${pauseReason}`, "error");
+      return;
+    }
+
+    setActionMessage("Partida pausada.", "info");
+    return;
   }
+
+  setActionMessage("Listo para operar.", "info");
 }
 
 async function callGameAction(endpoint) {

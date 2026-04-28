@@ -802,8 +802,10 @@ class GameEngine:
 
         started_at = app_state.question_started_at()
         elapsed_time = 0.0
+        question_time_limit = app_state._game_config.question_time if app_state._game_config else 20
         if started_at is not None:
             elapsed_time = max(0.0, (datetime.now(timezone.utc) - started_at).total_seconds())
+            elapsed_time = min(elapsed_time, float(question_time_limit))
 
         press = ButtonPress(
             device_id=device_id,

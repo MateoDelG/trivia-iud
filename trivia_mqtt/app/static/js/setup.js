@@ -489,6 +489,12 @@ async function uploadQuestionsFile() {
     return;
   }
 
+  const fileName = String(selectedFile.name || "").toLowerCase();
+  if (!fileName.endsWith(".csv") && !fileName.endsWith(".xlsx")) {
+    setQuestionsMessage("Formato no valido. Usa un archivo .csv o .xlsx.", "error");
+    return;
+  }
+
   const formData = new FormData();
   formData.append("file", selectedFile);
 
