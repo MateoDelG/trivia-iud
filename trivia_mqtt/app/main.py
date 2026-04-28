@@ -483,6 +483,20 @@ async def websocket_endpoint(websocket: WebSocket) -> None:
 
 @app.get("/api/results")
 async def get_all_results():
+    if app_state.game_config() is None:
+        return {
+            "game_name": None,
+            "game_started_at": None,
+            "game_finished_at": None,
+            "game_uid": None,
+            "is_persisted": False,
+            "game_status": app_state.game_status(),
+            "final_ranking": [],
+            "questions": {"total": 0, "items": []},
+            "answers": {"total": 0, "items": []},
+            "presses": {"total": 0, "items": []},
+            "events": {"total": 0, "items": []},
+        }
     ranking = app_state.finalize_game() if app_state.game_status() == "game_finished" else []
     questions = app_state.question_history()
     answers = app_state.answer_history()
@@ -490,7 +504,7 @@ async def get_all_results():
     events = app_state.events()
     
     return {
-        "game_name": app_state.game_config().game_name if app_state.game_config() else None,
+        "game_name": app_state.game_config().game_name,
         "game_started_at": app_state.game_started_at().isoformat() if app_state.game_started_at() else None,
         "game_finished_at": app_state.game_finished_at().isoformat() if app_state.game_finished_at() else None,
         "game_uid": app_state.game_uid(),

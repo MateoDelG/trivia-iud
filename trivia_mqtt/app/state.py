@@ -466,7 +466,16 @@ class AppState:
                 team.average_press_time = round(sum(times) / len(times), 2) if times else 0.0
                 team.total_response_time = round(sum(times), 2) if times else 0.0
 
-            ranking = sorted(teams, key=lambda item: (-item.score, item.name.lower()))
+            ranking = sorted(
+                teams,
+                key=lambda item: (
+                    -item.score,
+                    item.total_response_time,
+                    -item.correct_answers,
+                    item.incorrect_answers,
+                    item.name.lower(),
+                ),
+            )
 
             return {
                 "game_status": self._game_status,
@@ -625,7 +634,15 @@ class AppState:
                 total_response_time=round(total_time, 2)
             ))
 
-        results.sort(key=lambda x: (-x.score, -x.correct_answers, x.incorrect_answers, x.total_response_time))
+        results.sort(
+            key=lambda x: (
+                -x.score,
+                x.total_response_time,
+                -x.correct_answers,
+                x.incorrect_answers,
+                x.team_name.lower(),
+            )
+        )
         for idx, r in enumerate(results):
             r.position = idx + 1
 
