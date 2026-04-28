@@ -350,8 +350,14 @@ function processEventEffects(eventData) {
     return;
   }
 
-  if (eventData.event_type === "question_timeout_no_answers") {
-    showPopup("⏰ ¡Se acabó el tiempo!", "warning", 4400);
+if (eventData.event_type === "question_timeout_no_answers") {
+    showPopup("⏰ ¡Se acabou el tiempo!", "warning", 4400);
+  }
+  
+  if (eventData.event_type === "control_offline") {
+    const deviceId = eventData.device_id || eventData.payload?.device_id || "control";
+    const teamName = eventData.team_name || eventData.team?.name || eventData.payload?.team_name || deviceId;
+    showPopup(`⚠️ ${teamName} desconectado`, "error", 3000);
   }
 }
 

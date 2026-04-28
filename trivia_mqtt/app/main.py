@@ -41,8 +41,74 @@ def _questions_snapshot() -> dict:
 
 async def _presence_watchdog() -> None:
     previous_signature = _controls_signature()
+    previous_online_controls = set()
+    
     while True:
         await asyncio.sleep(1)
+        
+        stale_controls = app_state.check_stale_controls()
+        current_online_controls = set()
+        
+        for device_id, control in app_state._controls.items():
+            current_online_controls.add(device_id)
+        
+        for stale in stale_controls:
+            device_id = stale["device_id"]
+            team_name = stale.get("team_name")
+            
+            event_payload = {
+                "device_id": device_id,
+                "status": "offline",
+            }
+            
+            from app.models import EventRecord
+            from datetime import datetime, timezone
+            
+            event = EventRecord(
+                timestamp=datetime.now(timezone.utc),
+                device_id=device_id,
+                event_type="status_update",
+                topic=f"trivia/controls/{device_id}/status",
+                payload=event_payload,
+            )
+            app_state.add_event(event)
+            
+            message = {
+                "type": "event_received",
+                "data": {
+                    "timestamp": event.timestamp.isoformat(),
+                    "device_id": device_id,
+                    "event_type": "status_update",
+                    "topic": f"trivia/controls/{device_id}/status",
+                    "payload": {"device_id": device_id, "status": "offline"},
+                }
+            }
+            await ws_manager.broadcast_json(message)
+            
+            current_game_status = app_state.game_status()
+            if current_game_status in {"question_ready", "question_active", "waiting_for_answer"}:
+                teams = app_state.teams()
+                assigned_controls = {team.control_id for team in teams if team.is_active}
+                if device_id in assigned_controls:
+                    reason = f"Control desconectado durante la pregunta: {device_id}"
+                    await game_engine.pause_game(reason=reason, source="auto_disconnect")
+            
+            if device_id in previous_online_controls:
+                popup_message = {
+                    "type": "event_received", 
+                    "data": {
+                        "timestamp": event.timestamp.isoformat(),
+                        "device_id": device_id,
+                        "event_type": "control_offline",
+                        "topic": f"trivia/controls/{device_id}/status",
+                        "payload": {"device_id": device_id, "status": "offline"},
+                        "team_name": team_name,
+                    }
+                }
+                await ws_manager.broadcast_json(popup_message)
+        
+        previous_online_controls = current_online_controls
+        
         current_signature = _controls_signature()
         if current_signature == previous_signature:
             continue

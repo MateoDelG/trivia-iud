@@ -82,6 +82,31 @@ class AppState:
         with self._lock:
             self._controls.pop(device_id, None)
 
+    def check_stale_controls(self) -> List[Dict[str, Any]]:
+        now = self._now()
+        stale_events: List[Dict[str, Any]] = []
+        
+        with self._lock:
+            controls_snapshot = list(self._controls.items())
+        
+        for device_id, control in controls_snapshot:
+            age_seconds = (now - control.last_seen).total_seconds()
+            if age_seconds > CONTROL_STALE_SECONDS:
+                current_game_status = self._game_status
+                teams = self._game_config.teams if self._game_config else []
+                team = next((t for t in teams if t.control_id == device_id), None)
+                
+                stale_events.append({
+                    "device_id": device_id,
+                    "team_name": team.name if team else None,
+                    "control_id": device_id,
+                    "current_status": control.status,
+                })
+                
+                self._controls.pop(device_id, None)
+        
+        return stale_events
+
     def add_event(self, event: EventRecord) -> None:
         with self._lock:
             self._events.appendleft(event)
