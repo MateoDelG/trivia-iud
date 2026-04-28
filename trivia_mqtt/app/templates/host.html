@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>TriviaMQTT - Panel del Host</title>
+    <title>Trivia - Panel del Host</title>
     <link rel="stylesheet" href="/static/css/theme.css" />
     <link rel="stylesheet" href="/static/css/host.css" />
   </head>
@@ -11,7 +11,7 @@
     <div class="noise-overlay" aria-hidden="true"></div>
 
     <svg class="host-icon-sprite" aria-hidden="true" style="position:absolute;width:0;height:0;overflow:hidden">
-      <symbol id="icon-logo" viewBox="0 0 24 24"><path d="M4 4h8l-3 7h6l-8 9 2-7H4l4-9z" fill="currentColor"/></symbol>
+      <symbol id="icon-logo" viewBox="0 0 24 24"><path d="M7 7h10c1.9 0 3.4 1.3 3.8 3.1l.9 3.6c.2.8 0 1.7-.6 2.3l-1.7 1.9c-.5.6-1.4.7-2 .2l-2.6-2h-7l-2.6 2c-.6.5-1.5.4-2-.2L2.5 16c-.6-.6-.8-1.5-.6-2.3l.9-3.6C3.6 8.3 5.1 7 7 7zm-1 3.5v1.8h1.8V14h1.8v-1.7h1.7v-1.8H9.6V8.8H7.8v1.7H6zm10 .1a1.6 1.6 0 100 3.2 1.6 1.6 0 000-3.2zm3.1-.2a1.3 1.3 0 100 2.6 1.3 1.3 0 000-2.6z" fill="currentColor"/></symbol>
       <symbol id="icon-display" viewBox="0 0 24 24"><path d="M3 5h18v12H3V5zm2 2v8h14V7H5zm5 12h4v1h-4v-1z" fill="currentColor"/></symbol>
       <symbol id="icon-results" viewBox="0 0 24 24"><path d="M5 3h2v18H5V3zm6 6h2v12h-2V9zm6-4h2v16h-2V5z" fill="currentColor"/></symbol>
       <symbol id="icon-status" viewBox="0 0 24 24"><path d="M12 3l8 4v10l-8 4-8-4V7l8-4zm0 2.2L6 8v8l6 2.8 6-2.8V8l-6-2.8zm-1 4.3l5 2.5-5 2.5V9.5z" fill="currentColor"/></symbol>
@@ -29,24 +29,24 @@
     </svg>
 
     <div class="app-shell">
-      <header class="topbar host-topbar">
+      <header class="topbar host-topbar host-navbar">
         <div class="brand host-brand">
-          <svg class="icon icon-logo"><use href="#icon-logo"></use></svg>
-          <span>TriviaMQTT Host</span>
+          <span class="icon icon-logo" aria-hidden="true">🎮</span>
+          <span>Trivia Host</span>
         </div>
-        <nav class="nav-links" aria-label="Navegacion principal">
-          <a href="/setup">Configuracion</a>
-          <a href="/host" aria-current="page" class="active">Host</a>
-          <a href="/display">Display</a>
-          <a href="/results">Resultados</a>
-          <a href="/history">Historial</a>
+        <nav class="nav-links host-nav-links" aria-label="Navegacion principal">
+          <a class="host-nav-link" href="/setup">Configuración</a>
+          <a class="host-nav-link host-nav-link-active active" href="/host" aria-current="page">Host</a>
+          <a class="host-nav-link" href="/display">Display</a>
+          <a class="host-nav-link" href="/results">Resultados</a>
+          <a class="host-nav-link" href="/history">Historial</a>
         </nav>
-        <div class="host-topbar-actions">
-          <a class="btn btn-primary btn-display-open" href="/display" target="_blank" rel="noopener">
+        <div class="host-topbar-actions host-actions">
+          <a class="btn btn-primary btn-display-open host-action-primary" href="/display" target="_blank" rel="noopener">
             <svg class="icon"><use href="#icon-display"></use></svg>
             <span>Abrir display</span>
           </a>
-          <button id="btn-toggle-display" class="btn btn-secondary btn-display-toggle">
+          <button id="btn-toggle-display" class="btn btn-secondary btn-display-toggle host-action-secondary">
             <svg class="icon"><use href="#icon-results"></use></svg>
             <span>Ver resultados</span>
           </button>
@@ -55,150 +55,164 @@
 
       <main class="page-container host-page">
         <section class="hero host-hero animate-fade-up">
-          <div class="hero-content">
-            <span class="badge"><span class="status-dot"></span> Control central en tiempo real</span>
-            <h1>Gestiona la <span class="gradient-text">partida en vivo</span></h1>
-            <p>Inicia rondas, controla el temporizador, valida respuestas y lleva el marcador sin perder ritmo.</p>
+          <div class="hero-content host-hero-content">
+            <span class="badge host-hero-badge"><span class="status-dot"></span> Control central en tiempo real</span>
+            <h1 class="host-hero-title">Gestiona la <span class="gradient-text">partida</span></h1>
           </div>
 
-          <div class="hero-metrics" aria-label="Resumen rapido de partida">
-            <article class="hero-metric-card metric-status">
-              <h3><svg class="icon"><use href="#icon-status"></use></svg>Estado</h3>
-              <p id="overview-state" class="metric-value">-</p>
-              <span id="overview-state-sub" class="metric-sub">Sin partida</span>
+          <div class="hero-metrics host-summary-grid" aria-label="Resumen rapido de partida">
+            <article class="hero-metric-card host-summary-card metric-status">
+              <h3 class="summary-label"><svg class="icon"><use href="#icon-status"></use></svg>Estado</h3>
+              <p id="overview-state" class="metric-value summary-value">-</p>
+              <span id="overview-state-sub" class="metric-sub summary-meta">Sin partida</span>
             </article>
-            <article class="hero-metric-card metric-question">
-              <h3><svg class="icon"><use href="#icon-question"></use></svg>Pregunta actual</h3>
-              <p id="overview-question" class="metric-value">- / -</p>
-              <span id="overview-round-sub" class="metric-sub">Ronda -</span>
+            <article class="hero-metric-card host-summary-card metric-question">
+              <h3 class="summary-label"><svg class="icon"><use href="#icon-question"></use></svg>Pregunta actual</h3>
+              <p id="overview-question" class="metric-value summary-value">- / -</p>
+              <span id="overview-round-sub" class="metric-sub summary-meta">Ronda -</span>
             </article>
-            <article class="hero-metric-card metric-team">
-              <h3><svg class="icon"><use href="#icon-team"></use></svg>Equipo en turno</h3>
-              <p id="overview-team" class="metric-value">-</p>
-              <span class="metric-sub">En turno</span>
-            </article>
-            <article class="hero-metric-card metric-timer">
-              <h3><svg class="icon"><use href="#icon-timer"></use></svg>Tiempo restante</h3>
-              <p id="overview-timer" class="metric-value">00:00</p>
-              <span id="overview-timer-sub" class="metric-sub">Sin temporizador</span>
+            <article class="hero-metric-card host-summary-card metric-team">
+              <h3 class="summary-label"><svg class="icon"><use href="#icon-team"></use></svg>Equipo en turno</h3>
+              <p id="overview-team" class="metric-value summary-value">-</p>
+              <span class="metric-sub summary-meta">Turno activo</span>
             </article>
           </div>
         </section>
 
-        <section class="host-layout">
+        <section class="host-layout host-main-grid">
           <section class="left-column">
-            <section class="card" id="controls-panel">
-              <h2 class="card-title">Controles de juego</h2>
-              <div class="actions-board">
-                <article class="action-group-card">
-                  <h3 class="action-group-title">Acciones principales</h3>
-                  <div class="game-actions game-actions-primary">
-                    <button id="btn-game-start" class="primary btn-action">
+            <section class="card game-controls-card" id="controls-panel">
+              <h2 class="card-title game-controls-header">Controles de juego</h2>
+              <div class="actions-board control-groups-grid">
+                <article class="action-group-card control-group-card">
+                  <h3 class="action-group-title control-group-title">Acciones principales</h3>
+                  <div class="game-actions game-actions-primary control-group-actions">
+                    <button id="btn-game-start" class="primary btn-action host-btn host-btn-primary">
                       <svg class="icon"><use href="#icon-play"></use></svg>
                       <span>Iniciar partida</span>
                     </button>
-                    <button id="btn-game-pause" class="btn-secondary btn-action">
+                    <button id="btn-game-pause" class="btn-secondary btn-action host-btn host-btn-secondary">
                       <svg class="icon"><use href="#icon-pause"></use></svg>
                       <span>Pausar partida</span>
                     </button>
-                    <button id="btn-game-resume" class="btn-secondary btn-action">
+                    <button id="btn-game-resume" class="btn-secondary btn-action host-btn host-btn-secondary">
                       <svg class="icon"><use href="#icon-resume"></use></svg>
                       <span>Reanudar partida</span>
                     </button>
                   </div>
                 </article>
 
-                <article class="action-group-card">
-                  <h3 class="action-group-title">Flujo de preguntas</h3>
-                  <div class="game-actions game-actions-flow">
-                    <button id="btn-question-start" class="btn-secondary btn-action">
-                      <svg class="icon"><use href="#icon-next"></use></svg>
+                <article class="action-group-card control-group-card">
+                  <h3 class="action-group-title control-group-title">Flujo de preguntas</h3>
+                  <div class="game-actions game-actions-flow control-group-actions">
+                    <button id="btn-question-start" class="btn-secondary btn-action host-btn host-btn-primary">
+                      <svg class="icon"><use href="#icon-resume"></use></svg>
                       <span>Iniciar siguiente pregunta</span>
                     </button>
-                    <button id="btn-timer-start" class="btn-secondary btn-action">
+                    <button id="btn-timer-start" class="btn-secondary btn-action host-btn host-btn-secondary">
                       <svg class="icon"><use href="#icon-timer"></use></svg>
                       <span>Iniciar temporizador</span>
                     </button>
-                    <button id="btn-question-skip" class="btn-secondary btn-action">
+                    <button id="btn-question-skip" class="btn-secondary btn-action host-btn host-btn-warning">
                       <svg class="icon"><use href="#icon-skip"></use></svg>
                       <span>Saltar pregunta</span>
                     </button>
                   </div>
                 </article>
 
-                <article class="action-group-card">
-                  <h3 class="action-group-title">Validar respuesta</h3>
-                  <div class="game-actions game-actions-validation">
-                    <button id="btn-answer-correct" class="primary btn-action">
+                <article class="action-group-card control-group-card">
+                  <h3 class="action-group-title control-group-title">Validar respuesta</h3>
+                  <div class="game-actions game-actions-validation control-group-actions">
+                    <button id="btn-answer-correct" class="primary btn-action host-btn host-btn-success">
                       <svg class="icon"><use href="#icon-check"></use></svg>
                       <span>Marcar correcta</span>
                     </button>
-                    <button id="btn-answer-incorrect" class="btn-secondary btn-action">
+                    <button id="btn-answer-incorrect" class="btn-secondary btn-action host-btn host-btn-warning">
                       <svg class="icon"><use href="#icon-cross"></use></svg>
                       <span>Marcar incorrecta</span>
                     </button>
                   </div>
                 </article>
 
-                <article class="action-group-card action-group-danger">
-                  <h3 class="action-group-title">Finalizar</h3>
-                  <div class="game-actions game-actions-danger">
-                    <button id="btn-game-end" class="danger btn-action">
+                <article class="action-group-card action-group-danger control-group-card">
+                  <h3 class="action-group-title control-group-title">Finalizar</h3>
+                  <div class="game-actions game-actions-danger control-group-actions">
+                    <button id="btn-game-end" class="danger btn-action host-btn host-btn-danger">
                       <svg class="icon"><use href="#icon-flag"></use></svg>
                       <span>Finalizar partida</span>
                     </button>
+                    <p class="control-group-note">Esta accion cerrara la partida actual.</p>
                   </div>
                 </article>
               </div>
-              <div id="host-action-message" class="list-empty">Sin acciones ejecutadas.</div>
+              <div id="host-action-message" class="host-alert host-alert-info">Listo para operar.</div>
             </section>
 
-            <section class="card" id="question-panel">
-              <h2 class="card-title"><svg class="icon"><use href="#icon-question"></use></svg>Pregunta actual</h2>
-              <div id="question-index" class="list-empty">Pregunta -/-</div>
-              <h3 id="question-text" class="list-empty">Sin pregunta activa.</h3>
-              <div id="question-options" class="question-options"></div>
-              <div id="question-correct" class="host-correct-answer">Respuesta correcta: -</div>
-              <div id="question-explanation" class="host-explanation">Explicacion: se muestra al validar la pregunta.</div>
-              <div id="question-timer" class="timer-value">0 s</div>
+            <section class="card current-question-card" id="question-panel">
+              <div class="current-question-header">
+                <h2 class="card-title current-question-title"><svg class="icon"><use href="#icon-question"></use></svg>Pregunta actual</h2>
+                <div id="question-index" class="current-question-index">Pregunta -/-</div>
+              </div>
+              <div class="current-question-body">
+                <div class="current-question-main">
+                  <h3 id="question-text" class="current-question-text">Sin pregunta activa.</h3>
+                  <div id="question-options" class="host-options-grid"></div>
+                  <div class="question-feedback">
+                    <div id="question-correct" class="question-correct-answer">Respuesta correcta: -</div>
+                    <div id="question-explanation" class="question-explanation">Explicacion: se muestra al validar la pregunta.</div>
+                  </div>
+                </div>
+                <aside class="question-time-panel">
+                  <div class="question-time-label">Tiempo restante</div>
+                  <div id="question-timer" class="question-time-value">0 s</div>
+                </aside>
+              </div>
             </section>
 
-            <section class="card" id="queue-panel">
+            <section class="card turn-queue-card" id="queue-panel">
               <h2 class="card-title"><svg class="icon"><use href="#icon-team"></use></svg>Turno y cola de pulsaciones</h2>
-              <div id="current-team" class="list-empty">Equipo en turno: -</div>
-              <ol id="press-queue" class="press-queue list-empty"></ol>
+              <div class="current-turn-box">
+                <div class="current-turn-label">Equipo en turno</div>
+                <div id="current-team" class="current-turn-team">Sin equipo en turno</div>
+              </div>
+              <ol id="press-queue" class="press-queue-list"></ol>
             </section>
           </section>
 
           <section class="right-column">
-            <section class="card" id="game-state-panel">
+            <section class="card match-status-card" id="game-state-panel">
               <h2 class="card-title"><svg class="icon"><use href="#icon-status"></use></svg>Estado de partida</h2>
-              <div id="game-status" class="state-badge">setup</div>
-              <div id="game-name" class="list-empty">No hay partida configurada.</div>
-              <div id="question-time" class="list-empty">Tiempo por pregunta: -</div>
-              <div id="question-mode" class="list-empty">Modo de preguntas: -</div>
-              <div id="questions-loaded" class="list-empty">Preguntas cargadas: no</div>
-              <div id="total-questions" class="list-empty">Total de preguntas: 0</div>
+              <div id="game-status" class="state-badge status-badge">Configuración</div>
+              <div class="status-details">
+                <div class="status-row"><span class="status-label">Partida</span><span id="game-name" class="status-value">No hay partida configurada.</span></div>
+                <div class="status-row"><span class="status-label">Tiempo por pregunta</span><span id="question-time" class="status-value">-</span></div>
+                <div class="status-row"><span class="status-label">Modo de preguntas</span><span id="question-mode" class="status-value">-</span></div>
+                <div class="status-row"><span class="status-label">Preguntas cargadas</span><span id="questions-loaded" class="status-value">No</span></div>
+                <div class="status-row"><span class="status-label">Total de preguntas</span><span id="total-questions" class="status-value">0</span></div>
+              </div>
             </section>
 
-            <section class="card" id="ranking-panel">
+            <section class="card host-ranking-card" id="ranking-panel">
               <h2 class="card-title"><svg class="icon"><use href="#icon-results"></use></svg>Ranking</h2>
               <div id="ranking-list" class="list-empty">Sin puntajes aun.</div>
             </section>
 
-            <section class="card" id="teams-panel">
+            <section class="card configured-teams-card" id="teams-panel">
               <h2 class="card-title">Equipos configurados</h2>
               <div id="teams-list" class="list-empty">No hay equipos configurados.</div>
             </section>
 
-            <section class="card" id="control-monitor-panel">
+            <section class="card detected-controls-card" id="control-monitor-panel">
               <h2 class="card-title">Controles detectados</h2>
               <div id="controls-list" class="list-empty">No hay controles detectados.</div>
             </section>
 
-            <section class="card" id="events-panel">
-              <h2 class="card-title">Historial de eventos</h2>
-              <div id="events-list" class="list-empty">No hay eventos todavia.</div>
+            <section class="card event-history-card hidden" id="events-panel">
+              <div class="event-history-header">
+                <h2 class="card-title">Historial de eventos</h2>
+                <p class="list-empty">Ultimos eventos del sistema</p>
+              </div>
+              <div id="events-list" class="event-history-list list-empty">Aun no hay eventos registrados</div>
             </section>
           </section>
         </section>
@@ -217,19 +231,19 @@
           <span class="control-last-seen"></span>
         </div>
         <div class="control-actions">
-          <button data-mode="on" class="btn-secondary">on</button>
-          <button data-mode="off" class="btn-secondary">off</button>
-          <button data-mode="blink_slow" class="btn-secondary">blink_slow</button>
-          <button data-mode="blink_fast" class="btn-secondary">blink_fast</button>
+          <button data-mode="on" class="btn-secondary led-chip led-chip-on">on</button>
+          <button data-mode="off" class="btn-secondary led-chip led-chip-off">off</button>
+          <button data-mode="blink_slow" class="btn-secondary led-chip led-chip-slow">Parpadeo lento</button>
+          <button data-mode="blink_fast" class="btn-secondary led-chip led-chip-fast">Parpadeo rapido</button>
         </div>
       </article>
     </template>
 
     <template id="event-template">
-      <article class="event-item">
+      <article class="event-item event-history-item">
         <span class="event-time"></span>
-        <strong class="event-device"></strong>
-        <span class="event-message"></span>
+        <span class="event-message event-description"></span>
+        <strong class="event-device event-source"></strong>
       </article>
     </template>
 

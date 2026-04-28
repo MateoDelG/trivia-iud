@@ -51,9 +51,11 @@ const controlPrevStatus = new Map();
 
 function setActionMessage(text, type = "info") {
   hostActionMessageEl.textContent = text;
-  hostActionMessageEl.className = "";
-  if (type === "error") hostActionMessageEl.classList.add("message-error");
-  if (type === "success") hostActionMessageEl.classList.add("message-success");
+  hostActionMessageEl.className = "host-alert";
+  if (type === "error") hostActionMessageEl.classList.add("host-alert-danger");
+  else if (type === "success") hostActionMessageEl.classList.add("host-alert-success");
+  else if (type === "warning") hostActionMessageEl.classList.add("host-alert-warning");
+  else hostActionMessageEl.classList.add("host-alert-info");
 }
 
 function showHostPopup(message) {
@@ -89,7 +91,7 @@ function maybeShowControlStatusPopup(eventData) {
   if (status === "offline") {
     if (prevStatus === "online") {
       const team = (gameState?.teams || []).find((item) => item.control_id === deviceId);
-      const teamSuffix = team ? ` (${team.name})` : "";
+      const teamSuffix = team ? ` (${formatTeamName(team.name)})` : "";
       showHostPopup(`Control desconectado: ${deviceId}${teamSuffix}`);
     }
     controlPrevStatus.set(deviceId, "offline");
@@ -99,7 +101,7 @@ function maybeShowControlStatusPopup(eventData) {
   if (status === "online") {
     if (prevStatus === "offline") {
       const team = (gameState?.teams || []).find((item) => item.control_id === deviceId);
-      const teamSuffix = team ? ` (${team.name})` : "";
+      const teamSuffix = team ? ` (${formatTeamName(team.name)})` : "";
       showHostPopup(`Control reconectado: ${deviceId}${teamSuffix}`);
     }
     controlPrevStatus.set(deviceId, "online");
@@ -110,6 +112,65 @@ function formatDate(dateString) {
   const date = new Date(dateString);
   if (Number.isNaN(date.getTime())) return dateString;
   return date.toLocaleString();
+}
+
+function formatSeconds(value) {
+  const n = Number(value);
+  if (!Number.isFinite(n)) return "-";
+  return `${n.toFixed(2)} s`;
+}
+
+function formatEventType(type) {
+  const map = {
+    status_update: "Estado",
+    button_pressed: "Pulsacion",
+    question_finished: "Pregunta",
+    answer_correct: "Correcta",
+    answer_incorrect: "Incorrecta",
+    answer_incorrect_next_team: "Incorrecta",
+    answer_incorrect_no_more_teams: "Incorrecta",
+    question_timeout_no_answers: "Temporizador",
+    question_timeout_with_queue: "Temporizador",
+    question_timeout_waiting_validation: "Temporizador",
+    timer_started: "Temporizador",
+    timer_stopped: "Temporizador",
+    control_offline: "Control",
+    control_online: "Control",
+  };
+  return map[type] || "Sistema";
+}
+
+function formatEventTime(value) {
+  if (!value) return "-";
+  try {
+    const date = new Date(value);
+    if (!Number.isNaN(date.getTime())) {
+      return date.toLocaleTimeString("es-CO", {
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+      });
+    }
+  } catch (_error) {
+  }
+  return String(value);
+}
+
+function formatEventDescription(event) {
+  return (
+    event?.description ||
+    event?.message ||
+    event?.event ||
+    event?.type ||
+    formatEventType(event?.event_type) ||
+    "Evento del sistema"
+  );
+}
+
+function formatEventSource(event) {
+  const raw = event?.source || event?.device_id || event?.control_id;
+  if (raw) return String(raw);
+  return formatEventType(event?.event_type) || "Sistema";
 }
 
 function formatMMSS(totalSeconds) {
@@ -123,19 +184,47 @@ function formatMMSS(totalSeconds) {
   return `${minutes}:${seconds}`;
 }
 
-function statusLabel(status) {
-  const labels = {
-    setup: "Esperando",
-    configured: "Lista",
-    game_running: "En vivo",
+function formatTeamName(name) {
+  if (name === null || name === undefined) return "-";
+  const raw = String(name).trim();
+  if (!raw) return "-";
+  if (/^\d+$/.test(raw)) return `Equipo ${raw}`;
+
+  const lowerWords = ["de", "del", "la", "las", "el", "los", "y", "e"];
+  return raw
+    .toLowerCase()
+    .split(" ")
+    .filter(Boolean)
+    .map((word) => (lowerWords.includes(word) ? word : word.charAt(0).toUpperCase() + word.slice(1)))
+    .join(" ");
+}
+
+function formatGameStatus(status) {
+  const map = {
+    setup: "Configuración",
+    configured: "Partida configurada",
+    game_ready: "Partida lista",
+    game_running: "Partida en curso",
     question_ready: "Pregunta lista",
     question_active: "Pregunta activa",
-    waiting_for_answer: "Validando",
-    question_finished: "Pregunta cerrada",
-    game_paused: "Pausada",
-    game_finished: "Finalizada",
+    waiting_for_answer: "Turno de respuesta",
+    question_finished: "Pregunta finalizada",
+    game_paused: "Pausado",
+    paused: "Pausado",
+    game_finished: "Partida finalizada",
   };
-  return labels[status] || status;
+  return map[status] || status || "Sin estado";
+}
+
+function formatQuestionMode(mode) {
+  const map = { ordered: "En orden", random: "Aleatorio" };
+  return map[mode] || mode || "-";
+}
+
+function formatBooleanLabel(value) {
+  if (value === true || value === "true" || value === "si" || value === "sí") return "Sí";
+  if (value === false || value === "false" || value === "no") return "No";
+  return value || "-";
 }
 
 function renderControls() {
@@ -153,7 +242,7 @@ function renderControls() {
     const status = String(control.status || "waiting").toLowerCase();
     node.querySelector(".control-id").textContent = control.device_id;
     const statusEl = node.querySelector(".control-status");
-    statusEl.textContent = `Estado: ${status}`;
+    statusEl.textContent = status === "online" ? "En linea" : status === "offline" ? "Desconectado" : "Esperando";
     statusEl.classList.remove("status-offline", "status-waiting");
     if (status === "offline") {
       statusEl.classList.add("status-offline");
@@ -177,18 +266,17 @@ function renderEvents() {
   eventsListEl.innerHTML = "";
 
   if (events.length === 0) {
-    eventsListEl.innerHTML = "No hay eventos todavia.";
-    eventsListEl.className = "list-empty";
+    eventsListEl.innerHTML = '<div class="empty-state">Aun no hay eventos registrados</div>';
+    eventsListEl.className = "event-history-list list-empty";
     return;
   }
 
-  eventsListEl.className = "";
-  events.forEach((eventItem) => {
+  eventsListEl.className = "event-history-list";
+  events.slice(0, 30).forEach((eventItem) => {
     const node = eventTemplate.content.cloneNode(true);
-    node.querySelector(".event-time").textContent = formatDate(eventItem.timestamp);
-    node.querySelector(".event-device").textContent = eventItem.device_id;
-    const message = eventItem.message || eventItem.event_type;
-    node.querySelector(".event-message").textContent = message;
+    node.querySelector(".event-time").textContent = formatEventTime(eventItem.timestamp || eventItem.time || eventItem.created_at);
+    node.querySelector(".event-device").textContent = formatEventSource(eventItem);
+    node.querySelector(".event-message").textContent = formatEventDescription(eventItem);
     eventsListEl.appendChild(node);
   });
 }
@@ -196,12 +284,12 @@ function renderEvents() {
 function renderQuestionOptions(question) {
   questionOptionsEl.innerHTML = "";
   if (!question) {
-    questionOptionsEl.className = "list-empty";
-    questionOptionsEl.textContent = "Sin opciones disponibles.";
+    questionOptionsEl.className = "host-options-grid";
+    questionOptionsEl.innerHTML = '<div class="host-options-empty">Sin opciones disponibles.</div>';
     return;
   }
 
-  questionOptionsEl.className = "question-options";
+  questionOptionsEl.className = "host-options-grid";
   const options = [
     ["A", question.option_a],
     ["B", question.option_b],
@@ -214,11 +302,12 @@ function renderQuestionOptions(question) {
 
   options.forEach(([letter, text]) => {
     const item = document.createElement("article");
-    item.className = "option-item";
+    item.className = "host-option-card neutral";
     if (answerRevealed && revealedAnswer === letter) {
-      item.classList.add("option-correct");
+      item.classList.remove("neutral");
+      item.classList.add("correct", "host-option-correct");
     }
-    item.innerHTML = `<strong>${letter}</strong><span>${text}</span>`;
+    item.innerHTML = `<span class="host-option-letter">${letter}</span><span class="host-option-text">${text || "-"}</span>`;
     questionOptionsEl.appendChild(item);
   });
 }
@@ -226,15 +315,16 @@ function renderQuestionOptions(question) {
 function renderQueue(queue) {
   pressQueueEl.innerHTML = "";
   if (!queue || queue.length === 0) {
-    pressQueueEl.className = "press-queue list-empty";
-    pressQueueEl.innerHTML = "<li>No hay pulsaciones registradas.</li>";
+    pressQueueEl.className = "press-queue-list press-queue-empty";
+    pressQueueEl.innerHTML = '<li class="press-queue-item"><span class="press-queue-team">Sin pulsaciones registradas</span></li>';
     return;
   }
 
-  pressQueueEl.className = "press-queue";
+  pressQueueEl.className = "press-queue-list";
   queue.forEach((press, index) => {
     const li = document.createElement("li");
-    li.textContent = `${index + 1}. ${press.team_name} - ${Number(press.elapsed_time).toFixed(2)} s`;
+    li.className = "press-queue-item";
+    li.innerHTML = `<span class="press-queue-order">${index + 1}.</span><span class="press-queue-team">${formatTeamName(press.team_name)}</span><span class="press-queue-time">${Number(press.elapsed_time).toFixed(2)} s</span>`;
     pressQueueEl.appendChild(li);
   });
 }
@@ -242,7 +332,7 @@ function renderQueue(queue) {
 function renderRanking(scores) {
   if (!scores || scores.length === 0) {
     rankingListEl.className = "list-empty";
-    rankingListEl.textContent = "Sin puntajes aun.";
+    rankingListEl.textContent = "No hay equipos configurados";
     return;
   }
 
@@ -250,15 +340,16 @@ function renderRanking(scores) {
     (gameState?.press_queue || []).map((press) => [press.team_id, Number(press.elapsed_time || 0)])
   );
 
-  rankingListEl.className = "ranking-list";
+  rankingListEl.className = "host-ranking-list";
   rankingListEl.innerHTML = scores
     .map((team, index) => {
       const responseTime = responseTimesByTeam.has(team.team_id)
-        ? `${responseTimesByTeam.get(team.team_id).toFixed(2)} s`
+        ? formatSeconds(responseTimesByTeam.get(team.team_id))
         : "-";
-      return `${index + 1}. ${team.name} - ${team.score} pts (Respuesta: ${responseTime})`;
+      const leaderClass = index === 0 ? "host-ranking-leader" : "";
+      return `<article class="host-ranking-item ${leaderClass}"><span class="ranking-position">${index + 1}</span><div><div class="ranking-team">${formatTeamName(team.name)}</div><div class="ranking-meta">Respuesta: ${responseTime}</div></div><span class="ranking-score">${team.score} pts</span></article>`;
     })
-    .join("<br />");
+    .join("");
 }
 
 function renderTeams(teams) {
@@ -269,19 +360,23 @@ function renderTeams(teams) {
     return;
   }
 
-  teamsListEl.className = "";
+  teamsListEl.className = "configured-teams-grid";
   const responseTimesByTeam = new Map(
     (gameState?.press_queue || []).map((press) => [press.team_id, Number(press.elapsed_time || 0)])
   );
 
   teams.forEach((team) => {
     const node = teamTemplate.content.cloneNode(true);
-    node.querySelector(".team-name").textContent = team.name;
-    node.querySelector(".team-control").textContent = `Control: ${team.control_id}`;
+    node.querySelector(".team-name").textContent = formatTeamName(team.name);
+    node.querySelector(".team-control").textContent = `Control: ${team.control_id || "-"}`;
     const responseTime = responseTimesByTeam.has(team.team_id)
-      ? `${responseTimesByTeam.get(team.team_id).toFixed(2)} s`
+      ? formatSeconds(responseTimesByTeam.get(team.team_id))
       : "-";
-    node.querySelector(".team-stats").textContent = `Puntaje: ${team.score} | C:${team.correct_answers} I:${team.incorrect_answers} P:${team.total_presses} | Tiempo respuesta: ${responseTime}`;
+    node.querySelector(".team-stats").innerHTML = `
+      <span class="configured-team-row"><span class="configured-team-label">Puntaje</span><span class="configured-team-value">${Number(team.score || 0)} pts</span></span>
+      <span class="configured-team-row"><span class="configured-team-label">C / I / P</span><span class="configured-team-value">${Number(team.correct_answers || 0)} / ${Number(team.incorrect_answers || 0)} / ${Number(team.total_presses || 0)}</span></span>
+      <span class="configured-team-row"><span class="configured-team-label">Tiempo de respuesta</span><span class="configured-team-value">${responseTime}</span></span>
+    `;
     teamsListEl.appendChild(node);
   });
 }
@@ -290,46 +385,73 @@ function renderGameState() {
   if (!gameState) return;
 
   const status = gameState.game_status || "setup";
-  gameStatusEl.textContent = status;
+  gameStatusEl.textContent = formatGameStatus(status);
   gameStatusEl.className = `state-badge status-${status}`;
-  gameNameEl.textContent = gameState.game_name ? `Partida: ${gameState.game_name}` : "No hay partida configurada.";
-  questionTimeEl.textContent = `Tiempo por pregunta: ${Number(gameState.question_time || 0)} s`;
-  questionModeEl.textContent = `Modo de preguntas: ${gameState.question_mode || "ordered"}`;
-  questionsLoadedEl.textContent = `Preguntas cargadas: ${gameState.questions_loaded ? "si" : "no"}`;
-  totalQuestionsEl.textContent = `Total de preguntas: ${Number(gameState.total_bank_questions || 0)}`;
+  gameNameEl.textContent = gameState.game_name || "No hay partida configurada.";
+  questionTimeEl.textContent = `${Number(gameState.question_time || 0)} s`;
+  questionModeEl.textContent = formatQuestionMode(gameState.question_mode || "ordered");
+  questionsLoadedEl.textContent = formatBooleanLabel(gameState.questions_loaded);
+  totalQuestionsEl.textContent = `${Number(gameState.total_bank_questions || 0)}`;
 
   const qIndex = Number(gameState.current_question_index ?? -1);
   const qTotal = Number(gameState.total_questions ?? 0);
   questionIndexEl.textContent = `Pregunta ${qIndex >= 0 ? qIndex + 1 : "-"}/${qTotal || "-"}`;
   questionTextEl.textContent = gameState.current_question?.text || "Sin pregunta activa.";
+  questionTextEl.classList.toggle("question-long", (gameState.current_question?.text || "").length > 100);
   renderQuestionOptions(gameState.current_question);
   questionCorrectEl.textContent = `Respuesta correcta: ${gameState.current_question?.correct_answer || "-"}`;
-  if (gameState.answer_revealed) {
+  if (gameState.answer_revealed && gameState.current_question) {
     const explanation = gameState.current_question?.explanation || gameState.current_question?.feedback;
     questionExplanationEl.textContent = explanation
       ? `Explicacion: ${explanation}`
       : "Explicacion: no registrada para esta pregunta.";
-    questionExplanationEl.className = "host-explanation";
+    questionCorrectEl.parentElement?.classList.remove("hidden");
+    questionCorrectEl.className = "question-correct-answer";
+    questionExplanationEl.className = "question-explanation";
   } else {
-    questionExplanationEl.textContent = "Explicacion: se muestra al validar la pregunta.";
-    questionExplanationEl.className = "host-explanation list-empty";
+    questionCorrectEl.textContent = "";
+    questionCorrectEl.className = "question-correct-answer hidden";
+    questionExplanationEl.textContent = "";
+    questionExplanationEl.className = "question-explanation hidden";
+    questionCorrectEl.parentElement?.classList.add("hidden");
   }
-  questionTimerEl.textContent = `${Number(gameState.question_remaining_time || 0)} s`;
-  currentTeamEl.textContent = `Equipo en turno: ${gameState.current_team?.name || "-"}`;
+  const remaining = Number(gameState.question_remaining_time || 0);
+  questionTimerEl.textContent = `${remaining} s`;
+  currentTeamEl.className = "current-turn-team";
+  if (status === "game_finished") {
+    currentTeamEl.textContent = "Partida finalizada";
+    currentTeamEl.classList.add("is-muted");
+  } else if (status === "question_finished") {
+    currentTeamEl.textContent = gameState.current_team?.name
+      ? `Turno finalizado: ${formatTeamName(gameState.current_team?.name)}`
+      : "Pregunta finalizada";
+    currentTeamEl.classList.add("is-muted");
+  } else if (gameState.current_team?.name) {
+    currentTeamEl.textContent = `Equipo en turno: ${formatTeamName(gameState.current_team?.name)}`;
+  } else {
+    currentTeamEl.textContent = "Sin equipo en turno";
+    currentTeamEl.classList.add("is-muted");
+  }
 
   if (overviewStateEl) {
-    overviewStateEl.textContent = statusLabel(status);
+    overviewStateEl.textContent = formatGameStatus(status);
     overviewStateSubEl.textContent = gameState.game_pause_reason || stateDescription(status);
     overviewQuestionEl.textContent = `${qIndex >= 0 ? qIndex + 1 : "-"} / ${qTotal || "-"}`;
-    overviewRoundSubEl.textContent = `Ronda ${qIndex >= 0 ? qIndex + 1 : "-"}`;
-    overviewTeamEl.textContent = gameState.current_team?.name || "Sin turno";
-    overviewTimerEl.textContent = formatMMSS(gameState.question_remaining_time || 0);
-    overviewTimerSubEl.textContent =
-      status === "game_paused"
-        ? "Temporizador pausado"
-        : status === "question_active"
-          ? "Temporizador activo"
-          : "Sin temporizador";
+    overviewRoundSubEl.textContent = qIndex >= 0 ? `Pregunta ${qIndex + 1}` : "Ronda -";
+    overviewTeamEl.textContent = gameState.current_team?.name ? formatTeamName(gameState.current_team.name) : "Sin turno";
+    if (overviewTimerEl) {
+      overviewTimerEl.textContent = formatMMSS(gameState.question_remaining_time || 0);
+    }
+    if (overviewTimerSubEl) {
+      overviewTimerSubEl.textContent =
+        status === "game_paused"
+          ? "Pausado"
+          : status === "question_active"
+            ? "En curso"
+            : status === "question_finished" || status === "game_finished"
+              ? "Finalizado"
+              : "Sin temporizador";
+    }
   }
 
   renderQueue(gameState.press_queue || []);

@@ -11,7 +11,7 @@
     <div class="noise-overlay" aria-hidden="true"></div>
 
     <svg class="setup-icon-sprite" aria-hidden="true" style="position:absolute;width:0;height:0;overflow:hidden">
-      <symbol id="setup-icon-logo" viewBox="0 0 24 24"><path d="M4 4h8l-3 7h6l-8 9 2-7H4l4-9z" fill="currentColor"/></symbol>
+      <symbol id="setup-icon-logo" viewBox="0 0 24 24"><path d="M7 7h10c1.9 0 3.4 1.3 3.8 3.1l.9 3.6c.2.8 0 1.7-.6 2.3l-1.7 1.9c-.5.6-1.4.7-2 .2l-2.6-2h-7l-2.6 2c-.6.5-1.5.4-2-.2L2.5 16c-.6-.6-.8-1.5-.6-2.3l.9-3.6C3.6 8.3 5.1 7 7 7zm-1 3.5v1.8h1.8V14h1.8v-1.7h1.7v-1.8H9.6V8.8H7.8v1.7H6zm10 .1a1.6 1.6 0 100 3.2 1.6 1.6 0 000-3.2zm3.1-.2a1.3 1.3 0 100 2.6 1.3 1.3 0 000-2.6z" fill="currentColor"/></symbol>
       <symbol id="setup-icon-host" viewBox="0 0 24 24"><path d="M3 5h18v12H3V5zm2 2v8h14V7H5zm5 12h4v1h-4v-1z" fill="currentColor"/></symbol>
       <symbol id="setup-icon-display" viewBox="0 0 24 24"><path d="M4 5h16v10H4V5zm2 2v6h12V7H6zm4 10h4v2h-4v-2z" fill="currentColor"/></symbol>
       <symbol id="setup-icon-game" viewBox="0 0 24 24"><path d="M7 4h10l3 4v10l-3 2H7l-3-2V8l3-4zm2 5v2h2V9H9zm4 0v2h2V9h-2z" fill="currentColor"/></symbol>
@@ -22,156 +22,206 @@
     </svg>
 
     <div class="app-shell">
-      <header class="topbar setup-topbar">
+      <header class="topbar setup-topbar host-navbar">
         <div class="brand setup-brand">
-          <svg class="setup-icon setup-icon-logo"><use href="#setup-icon-logo"></use></svg>
-          <span>TriviaMQTT Setup</span>
+          <span class="setup-icon setup-icon-logo" aria-hidden="true">🎮</span>
+          <span><strong>Trivia</strong> Setup</span>
         </div>
-        <nav class="nav-links" aria-label="Navegacion principal">
-          <a href="/setup" aria-current="page" class="active">Configuracion</a>
-          <a href="/host">Host</a>
-          <a href="/display">Display</a>
-          <a href="/results">Resultados</a>
-          <a href="/history">Historial</a>
+        <nav class="nav-links setup-nav-links host-nav-links" aria-label="Navegacion principal">
+          <a class="setup-nav-link host-nav-link active host-nav-link-active" href="/setup" aria-current="page">Configuracion</a>
+          <a class="setup-nav-link host-nav-link" href="/host">Host</a>
+          <a class="setup-nav-link host-nav-link" href="/display">Display</a>
+          <a class="setup-nav-link host-nav-link" href="/results">Resultados</a>
+          <a class="setup-nav-link host-nav-link" href="/history">Historial</a>
         </nav>
-        <a class="btn btn-primary setup-cta" href="/host">
-          <svg class="setup-icon"><use href="#setup-icon-host"></use></svg>
-          <span>Ir a partida</span>
-        </a>
+        <div class="setup-topbar-actions host-actions">
+          <a class="btn btn-primary setup-cta host-action-primary" href="/display" target="_blank" rel="noopener">
+            <svg class="setup-icon"><use href="#setup-icon-display"></use></svg>
+            <span>Abrir display</span>
+          </a>
+          <a class="btn btn-secondary host-action-secondary" href="/host">
+            <svg class="setup-icon"><use href="#setup-icon-host"></use></svg>
+            <span>Ir a partida</span>
+          </a>
+        </div>
       </header>
 
       <main class="page-container setup-page">
         <section class="hero setup-hero animate-fade-up">
-          <span class="badge"><span class="status-dot"></span> Sistema listo para configurar</span>
-          <h1>Configura tu <span class="gradient-text">trivia en vivo</span> con controles MQTT</h1>
-          <p>
-            Define equipos, tiempo de respuesta y banco de preguntas en una sola vista. Los cambios se sincronizan en tiempo real
-            para host y display.
-          </p>
-          <div class="setup-quick-actions">
-            <a class="btn btn-secondary" href="/host"><svg class="setup-icon"><use href="#setup-icon-host"></use></svg><span>Ir al panel host</span></a>
-            <a class="btn btn-secondary" href="/display" target="_blank" rel="noopener"><svg class="setup-icon"><use href="#setup-icon-display"></use></svg><span>Abrir display</span></a>
+          <div class="setup-hero-content">
+            <span class="badge"><span class="status-dot"></span> Sistema listo para configurar</span>
+            <h1>Configura tu <span class="gradient-text">trivia</span></h1>
+          </div>
+          <div class="setup-hero-summary">
+            <article class="setup-summary-card summary-cyan">
+              <h3>Controles detectados</h3>
+              <p id="setup-stat-controls">0</p>
+              <span id="setup-stat-controls-meta">En linea: 0</span>
+            </article>
+            <article class="setup-summary-card summary-purple">
+              <h3>Equipos configurados</h3>
+              <p id="setup-stat-teams">1</p>
+              <span id="setup-stat-teams-meta">Listos para jugar</span>
+            </article>
+            <article class="setup-summary-card summary-blue">
+              <h3>Preguntas cargadas</h3>
+              <p id="setup-stat-questions">0</p>
+              <span id="setup-stat-questions-meta">Sin archivo cargado</span>
+            </article>
+            <article class="setup-summary-card summary-orange">
+              <h3>Tiempo por pregunta</h3>
+              <p id="setup-stat-time">20 s</p>
+              <span id="setup-stat-time-meta">Configurado</span>
+            </article>
           </div>
         </section>
 
-        <section class="setup-grid">
-          <section class="card">
-            <h2 class="card-title"><svg class="setup-icon"><use href="#setup-icon-game"></use></svg>Datos de partida</h2>
-            <div class="form-group">
-              <label for="game-name">Nombre de la partida</label>
-              <input id="game-name" type="text" placeholder="Trivia IoT" />
-            </div>
+        <section class="setup-main-grid">
+          <section class="setup-left-column">
+            <section class="setup-top-config-grid">
+              <section class="card setup-card">
+                <h2 class="card-title"><svg class="setup-icon"><use href="#setup-icon-game"></use></svg>Datos de partida</h2>
+                <div class="setup-form-grid">
+                  <div class="form-group">
+                    <label for="game-name">Nombre de la partida</label>
+                    <input id="game-name" type="text" placeholder="Trivia IoT" />
+                  </div>
+                  <div class="form-group">
+                    <label for="display-title">Titulo visible en display</label>
+                    <input id="display-title" type="text" placeholder="TriviaMQTT" />
+                  </div>
+                  <div class="form-group">
+                    <label for="question-time">Tiempo por pregunta (segundos)</label>
+                    <input id="question-time" type="number" min="5" max="120" step="1" value="20" />
+                  </div>
+                  <input id="display-theme" type="hidden" value="dark" />
+                  <div class="form-group form-group-compact">
+                    <label for="team-count">Numero de equipos</label>
+                    <select id="team-count">
+                      <option value="1">1</option>
+                      <option value="2">2</option>
+                      <option value="3">3</option>
+                      <option value="4">4</option>
+                      <option value="5">5</option>
+                      <option value="6">6</option>
+                      <option value="7">7</option>
+                      <option value="8">8</option>
+                      <option value="9">9</option>
+                      <option value="10">10</option>
+                    </select>
+                  </div>
+                </div>
+              </section>
 
-            <div class="form-group">
-              <label for="question-time">Tiempo por pregunta (segundos)</label>
-              <input id="question-time" type="number" min="5" max="120" step="1" value="20" />
-            </div>
+              <section class="card setup-card">
+                <h2 class="card-title"><svg class="setup-icon"><use href="#setup-icon-team"></use></svg>Equipos</h2>
+                <div id="teams-form" class="setup-teams-grid"></div>
+              </section>
+            </section>
 
-            <h3 class="setup-subtitle"><svg class="setup-icon"><use href="#setup-icon-theme"></use></svg>Apariencia del juego</h3>
-            <div class="form-group">
-              <label for="display-title">Titulo visible en display</label>
-              <input id="display-title" type="text" placeholder="TriviaMQTT" />
-            </div>
-
-            <div class="form-group">
-              <label for="display-theme">Tema visual</label>
-              <select id="display-theme">
-                <option value="dark">Dark</option>
-                <option value="neon">Neon</option>
-                <option value="classic">Classic</option>
-              </select>
-            </div>
-
-            <div class="form-group">
-              <label for="team-count">Numero de equipos</label>
-              <select id="team-count">
-                <option value="1">1</option>
-                <option value="2">2</option>
-                <option value="3">3</option>
-                <option value="4">4</option>
-                <option value="5">5</option>
-                <option value="6">6</option>
-                <option value="7">7</option>
-                <option value="8">8</option>
-                <option value="9">9</option>
-                <option value="10">10</option>
-              </select>
-            </div>
+            <section class="card questions-panel setup-card">
+              <h2 class="card-title"><svg class="setup-icon"><use href="#setup-icon-questions"></use></svg>Banco de preguntas</h2>
+              <p class="setup-section-description">Carga un archivo CSV o XLSX y define el orden de las preguntas.</p>
+              <div class="setup-question-grid">
+                <section class="setup-question-config">
+                  <div class="form-group">
+                    <label for="question-file">Archivo de preguntas (.csv o .xlsx)</label>
+                    <input id="question-file" type="file" accept=".csv,.xlsx" />
+                  </div>
+                  <button id="upload-questions-btn" type="button" class="btn btn-secondary">Cargar preguntas</button>
+                  <div class="form-group">
+                    <label for="question-mode-select">Modo de preguntas</label>
+                    <select id="question-mode-select">
+                      <option value="ordered">Orden original del archivo</option>
+                      <option value="random">Aleatorio</option>
+                    </select>
+                  </div>
+                  <div id="questions-counter" class="setup-message setup-message-info">Preguntas cargadas: 0</div>
+                  <div id="questions-upload-messages" class="setup-message setup-message-info">Sin mensajes de carga.</div>
+                  <ul id="questions-errors" class="error-list"></ul>
+                </section>
+                <section class="setup-question-preview">
+                  <div class="questions-preview-wrapper">
+                    <table id="questions-preview-table" class="questions-preview-table">
+                      <thead>
+                        <tr>
+                          <th>id</th>
+                          <th>pregunta</th>
+                          <th>opcion_a</th>
+                          <th>opcion_b</th>
+                          <th>opcion_c</th>
+                          <th>opcion_d</th>
+                          <th>respuesta_correcta</th>
+                          <th>puntos</th>
+                          <th>categoria</th>
+                          <th>dificultad</th>
+                          <th>explicacion</th>
+                        </tr>
+                      </thead>
+                      <tbody id="questions-preview-body">
+                        <tr>
+                          <td colspan="11" class="list-empty">No hay preguntas cargadas.</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </section>
+              </div>
+            </section>
           </section>
 
-          <section class="card">
-            <h2 class="card-title"><svg class="setup-icon"><use href="#setup-icon-controls"></use></svg>Controles detectados</h2>
-          <div id="detected-controls" class="list-empty">No hay controles detectados.</div>
-          </section>
-        </section>
+          <aside class="setup-right-column">
+            <section class="card setup-card">
+              <h2 class="card-title"><svg class="setup-icon"><use href="#setup-icon-controls"></use></svg>Controles detectados</h2>
+              <div id="detected-controls" class="detected-controls-list list-empty">No hay controles detectados.</div>
+            </section>
 
-        <section class="card">
-          <h2 class="card-title"><svg class="setup-icon"><use href="#setup-icon-team"></use></svg>Equipos</h2>
-          <div id="teams-form"></div>
-        </section>
+            <section class="card setup-card">
+              <h2 class="card-title">Resumen de configuracion</h2>
+              <div class="setup-summary-list">
+                <div class="setup-summary-row"><span>Partida</span><strong id="summary-game-name">-</strong></div>
+                <div class="setup-summary-row"><span>Titulo display</span><strong id="summary-display-title">-</strong></div>
+                <div class="setup-summary-row"><span>Tiempo por pregunta</span><strong id="summary-question-time">20 s</strong></div>
+                <div class="setup-summary-row"><span>Tema</span><strong id="summary-theme">dark</strong></div>
+                <div class="setup-summary-row"><span>Equipos</span><strong id="summary-team-count">1</strong></div>
+                <div class="setup-summary-row"><span>Controles asignados</span><strong id="summary-assigned-controls">0</strong></div>
+                <div class="setup-summary-row"><span>Preguntas cargadas</span><strong id="summary-questions-loaded">No</strong></div>
+                <div class="setup-summary-row"><span>Modo de preguntas</span><strong id="summary-question-mode">En orden</strong></div>
+              </div>
+            </section>
 
-        <section class="card actions-card">
-          <button id="save-config-btn" class="primary">Guardar configuracion</button>
-          <div id="validation-messages" class="list-empty">Sin mensajes.</div>
-        </section>
+            <section class="card setup-card">
+              <h2 class="card-title">Estado del banco</h2>
+              <div class="setup-summary-list">
+                <div class="setup-summary-row"><span>Archivo cargado</span><strong id="bank-file-loaded">No</strong></div>
+                <div class="setup-summary-row"><span>Total de preguntas</span><strong id="bank-total-questions">0</strong></div>
+                <div class="setup-summary-row"><span>Modo seleccionado</span><strong id="bank-question-mode">En orden</strong></div>
+                <div class="setup-summary-row"><span>Estado</span><strong id="bank-status">Pendiente</strong></div>
+              </div>
+            </section>
 
-        <section class="card questions-panel">
-          <h2 class="card-title"><svg class="setup-icon"><use href="#setup-icon-questions"></use></svg>Banco de preguntas</h2>
-          <div class="form-group">
-            <label for="question-file">Archivo de preguntas (.csv o .xlsx)</label>
-            <input id="question-file" type="file" accept=".csv,.xlsx" />
-          </div>
-          <button id="upload-questions-btn" type="button" class="btn-secondary">Cargar preguntas</button>
-
-          <div class="form-group">
-            <label for="question-mode-select">Modo de preguntas</label>
-            <select id="question-mode-select">
-              <option value="ordered">Orden original del archivo</option>
-              <option value="random">Aleatorio</option>
-            </select>
-          </div>
-
-          <div id="questions-counter" class="list-empty">Preguntas cargadas: 0</div>
-          <div id="questions-upload-messages" class="list-empty">Sin mensajes de carga.</div>
-          <ul id="questions-errors" class="error-list"></ul>
-
-          <div class="questions-preview-wrapper">
-            <table id="questions-preview-table" class="questions-preview-table">
-              <thead>
-                <tr>
-                  <th>id</th>
-                  <th>pregunta</th>
-                  <th>opcion_a</th>
-                  <th>opcion_b</th>
-                  <th>opcion_c</th>
-                  <th>opcion_d</th>
-                  <th>respuesta_correcta</th>
-                  <th>puntos</th>
-                  <th>categoria</th>
-                  <th>dificultad</th>
-                  <th>explicacion</th>
-                </tr>
-              </thead>
-              <tbody id="questions-preview-body">
-                <tr>
-                  <td colspan="11" class="list-empty">No hay preguntas cargadas.</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
+            <section class="card actions-card setup-card">
+              <div id="validation-messages" class="setup-message setup-message-info">Listo para guardar.</div>
+              <div class="setup-action-row">
+                <button id="save-config-btn" class="btn btn-primary">Guardar configuracion</button>
+                <button id="reset-config-btn" type="button" class="btn btn-secondary">Restablecer</button>
+              </div>
+            </section>
+          </aside>
         </section>
       </main>
     </div>
 
     <template id="team-row-template">
       <article class="team-row">
-        <h3 class="team-row-title"></h3>
+        <div class="team-row-head">
+          <h3 class="team-row-title"></h3>
+          <span class="team-status-badge">Sin control</span>
+        </div>
         <label>Nombre del equipo</label>
         <input class="team-name-input" type="text" placeholder="Equipo Azul" />
-
         <label>Control asignado</label>
         <select class="team-control-select"></select>
-
         <button class="test-control-btn btn-secondary" type="button">Probar control</button>
       </article>
     </template>

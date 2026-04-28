@@ -32,6 +32,8 @@ class Team(BaseModel):
     incorrect_answers: int = 0
     total_presses: int = 0
     is_active: bool = True
+    total_response_time: float = 0.0
+    average_press_time: float = 0.0
 
 
 class VisualConfig(BaseModel):
@@ -139,6 +141,7 @@ class TeamResult(BaseModel):
     incorrect_answers: int
     total_presses: int
     average_press_time: float
+    total_response_time: float
 
 
 class ScoreAdjustmentRecord(BaseModel):

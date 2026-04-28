@@ -6,6 +6,7 @@ const teamCountEl = document.getElementById("team-count");
 const detectedControlsEl = document.getElementById("detected-controls");
 const teamsFormEl = document.getElementById("teams-form");
 const saveConfigBtn = document.getElementById("save-config-btn");
+const resetConfigBtn = document.getElementById("reset-config-btn");
 const validationMessagesEl = document.getElementById("validation-messages");
 const teamRowTemplate = document.getElementById("team-row-template");
 
@@ -16,6 +17,22 @@ const questionsCounterEl = document.getElementById("questions-counter");
 const questionsUploadMessagesEl = document.getElementById("questions-upload-messages");
 const questionsErrorsEl = document.getElementById("questions-errors");
 const questionsPreviewBodyEl = document.getElementById("questions-preview-body");
+const setupStatControlsEl = document.getElementById("setup-stat-controls");
+const setupStatTeamsEl = document.getElementById("setup-stat-teams");
+const setupStatQuestionsEl = document.getElementById("setup-stat-questions");
+const setupStatTimeEl = document.getElementById("setup-stat-time");
+const summaryGameNameEl = document.getElementById("summary-game-name");
+const summaryDisplayTitleEl = document.getElementById("summary-display-title");
+const summaryQuestionTimeEl = document.getElementById("summary-question-time");
+const summaryThemeEl = document.getElementById("summary-theme");
+const summaryTeamCountEl = document.getElementById("summary-team-count");
+const summaryAssignedControlsEl = document.getElementById("summary-assigned-controls");
+const summaryQuestionsLoadedEl = document.getElementById("summary-questions-loaded");
+const summaryQuestionModeEl = document.getElementById("summary-question-mode");
+const bankFileLoadedEl = document.getElementById("bank-file-loaded");
+const bankTotalQuestionsEl = document.getElementById("bank-total-questions");
+const bankQuestionModeEl = document.getElementById("bank-question-mode");
+const bankStatusEl = document.getElementById("bank-status");
 
 const DRAFT_STORAGE_KEY = "trivia_mqtt_setup_draft_v1";
 const MIN_TEAMS = 1;
@@ -43,16 +60,66 @@ let draft = {
 
 function setMessage(text, type = "info") {
   validationMessagesEl.textContent = text;
-  validationMessagesEl.className = "";
-  if (type === "error") validationMessagesEl.classList.add("message-error");
-  if (type === "success") validationMessagesEl.classList.add("message-success");
+  validationMessagesEl.className = "setup-message";
+  if (type === "error") validationMessagesEl.classList.add("setup-message-error");
+  else if (type === "success") validationMessagesEl.classList.add("setup-message-success");
+  else validationMessagesEl.classList.add("setup-message-info");
 }
 
 function setQuestionsMessage(text, type = "info") {
   questionsUploadMessagesEl.textContent = text;
-  questionsUploadMessagesEl.className = "";
-  if (type === "error") questionsUploadMessagesEl.classList.add("message-error");
-  if (type === "success") questionsUploadMessagesEl.classList.add("message-success");
+  questionsUploadMessagesEl.className = "setup-message";
+  if (type === "error") questionsUploadMessagesEl.classList.add("setup-message-error");
+  else if (type === "success") questionsUploadMessagesEl.classList.add("setup-message-success");
+  else questionsUploadMessagesEl.classList.add("setup-message-info");
+}
+
+function formatQuestionMode(mode) {
+  if (mode === "random") return "Aleatorio";
+  return "En orden";
+}
+
+function formatBooleanLabel(value) {
+  return value ? "Si" : "No";
+}
+
+function renderSetupSummary() {
+  const teamCount = Number(teamCountEl.value || draft.team_count || 1);
+  const assignedControls = (draft.teams || []).filter((team) => Boolean(team.control_id)).length;
+  const loadedLabel = formatBooleanLabel(questionsLoaded);
+  const onlineControls = controls.filter((control) => String(control.status || "").toLowerCase() === "online").length;
+  const themeMap = { dark: "Dark", neon: "Neon", classic: "Classic" };
+  const selectedTheme = displayThemeEl.value || draft.visual_config?.theme || "dark";
+
+  if (setupStatControlsEl) setupStatControlsEl.textContent = String(controls.length);
+  const setupStatControlsMetaEl = document.getElementById("setup-stat-controls-meta");
+  if (setupStatControlsMetaEl) setupStatControlsMetaEl.textContent = `En linea: ${onlineControls}`;
+  if (setupStatTeamsEl) setupStatTeamsEl.textContent = String(teamCount);
+  const setupStatTeamsMetaEl = document.getElementById("setup-stat-teams-meta");
+  if (setupStatTeamsMetaEl) setupStatTeamsMetaEl.textContent = `${assignedControls}/${teamCount} listos`;
+  if (setupStatQuestionsEl) setupStatQuestionsEl.textContent = String(totalQuestions || 0);
+  const setupStatQuestionsMetaEl = document.getElementById("setup-stat-questions-meta");
+  if (setupStatQuestionsMetaEl) setupStatQuestionsMetaEl.textContent = questionsLoaded ? "Archivo cargado" : "Sin archivo cargado";
+  if (setupStatTimeEl) setupStatTimeEl.textContent = `${clampQuestionTime(questionTimeEl.value || draft.question_time)} s`;
+  const setupStatTimeMetaEl = document.getElementById("setup-stat-time-meta");
+  if (setupStatTimeMetaEl) setupStatTimeMetaEl.textContent = "Configurado";
+
+  if (summaryGameNameEl) summaryGameNameEl.textContent = (gameNameEl.value || "-").trim() || "-";
+  if (summaryDisplayTitleEl) summaryDisplayTitleEl.textContent = (displayTitleEl.value || "-").trim() || "-";
+  if (summaryQuestionTimeEl) summaryQuestionTimeEl.textContent = `${clampQuestionTime(questionTimeEl.value || draft.question_time)} s`;
+  if (summaryThemeEl) summaryThemeEl.textContent = themeMap[selectedTheme] || "Dark";
+  if (summaryTeamCountEl) summaryTeamCountEl.textContent = String(teamCount);
+  if (summaryAssignedControlsEl) summaryAssignedControlsEl.textContent = String(assignedControls);
+  if (summaryQuestionsLoadedEl) summaryQuestionsLoadedEl.textContent = loadedLabel;
+  if (summaryQuestionModeEl) summaryQuestionModeEl.textContent = formatQuestionMode(questionMode);
+
+  if (bankFileLoadedEl) bankFileLoadedEl.textContent = loadedLabel;
+  if (bankTotalQuestionsEl) bankTotalQuestionsEl.textContent = String(totalQuestions || 0);
+  if (bankQuestionModeEl) bankQuestionModeEl.textContent = formatQuestionMode(questionMode);
+  if (bankStatusEl) {
+    if (!questionsLoaded) bankStatusEl.textContent = "Pendiente";
+    else bankStatusEl.textContent = "Archivo cargado";
+  }
 }
 
 function clampQuestionTime(rawValue) {
@@ -65,11 +132,21 @@ function renderDetectedControls() {
   if (controls.length === 0) {
     detectedControlsEl.textContent = "No hay controles detectados.";
     detectedControlsEl.className = "list-empty";
+    renderSetupSummary();
     return;
   }
 
-  detectedControlsEl.className = "";
-  detectedControlsEl.textContent = controls.map((control) => control.device_id).join(", ");
+  detectedControlsEl.className = "detected-controls-list";
+  const assignedMap = new Map((draft.teams || []).filter((team) => team.control_id).map((team, index) => [team.control_id, `Equipo ${index + 1}`]));
+  detectedControlsEl.innerHTML = controls
+    .map((control) => {
+      const status = String(control.status || "offline").toLowerCase();
+      const onlineClass = status === "online" ? "online" : "";
+      const assigned = assignedMap.get(control.device_id);
+      return `<article class="detected-control-chip ${onlineClass}"><div class="detected-control-main"><span class="detected-control-id">${control.device_id}</span><span class="detected-control-sub">${status === "online" ? "En linea" : "Desconectado"}</span></div>${assigned ? `<span class="detected-control-assigned">Asignado a: ${assigned}</span>` : ""}</article>`;
+    })
+    .join("");
+  renderSetupSummary();
 }
 
 function normalizeDraft(raw) {
@@ -160,6 +237,7 @@ function syncDraftFromForm() {
   enforceUniqueDraftControls();
   questionTimeEl.value = String(draft.question_time);
   saveDraft();
+  renderSetupSummary();
 }
 
 function enforceUniqueDraftControls() {
@@ -260,6 +338,13 @@ function renderTeamRows() {
     });
 
     const testBtn = node.querySelector(".test-control-btn");
+    const statusBadge = node.querySelector(".team-status-badge");
+    const selectedControl = controls.find((control) => control.device_id === (existingTeam?.control_id || ""));
+    if (selectedControl) {
+      const isOnline = String(selectedControl.status || "").toLowerCase() === "online";
+      statusBadge.textContent = isOnline ? "Control en linea" : "Control offline";
+      statusBadge.classList.toggle("online", isOnline);
+    }
     testBtn.addEventListener("click", async () => {
       const deviceId = controlSelect.value;
       if (!deviceId) {
@@ -284,6 +369,7 @@ function renderTeamRows() {
   }
 
   saveDraft();
+  renderSetupSummary();
 }
 
 function collectPayload() {
@@ -333,6 +419,7 @@ async function saveGameConfig() {
   displayThemeEl.value = draft.visual_config.theme;
   setMessage("Configuracion guardada correctamente.", "success");
   renderTeamRows();
+  renderSetupSummary();
 }
 
 function renderQuestionsErrors(errors) {
@@ -392,6 +479,7 @@ function renderQuestionBankStatus() {
   questionsCounterEl.textContent = `Preguntas cargadas: ${totalQuestions}`;
   questionModeSelectEl.value = questionMode;
   renderQuestionsPreview();
+  renderSetupSummary();
 }
 
 async function uploadQuestionsFile() {
@@ -548,27 +636,45 @@ teamCountEl.addEventListener("change", () => {
 gameNameEl.addEventListener("input", () => {
   draft.game_name = gameNameEl.value;
   saveDraft();
+  renderSetupSummary();
 });
 
 questionTimeEl.addEventListener("change", () => {
   draft.question_time = clampQuestionTime(questionTimeEl.value);
   questionTimeEl.value = String(draft.question_time);
   saveDraft();
+  renderSetupSummary();
 });
 
 displayTitleEl.addEventListener("input", () => {
   draft.visual_config.display_title = (displayTitleEl.value || "").trim() || "TriviaMQTT";
   saveDraft();
+  renderSetupSummary();
 });
 
 displayThemeEl.addEventListener("change", () => {
   draft.visual_config.theme = displayThemeEl.value;
   saveDraft();
+  renderSetupSummary();
 });
 
 saveConfigBtn.addEventListener("click", async () => {
   await saveGameConfig();
 });
+
+if (resetConfigBtn) {
+  resetConfigBtn.addEventListener("click", () => {
+    draft = currentConfig ? draftFromConfig(currentConfig) : normalizeDraft(null);
+    gameNameEl.value = draft.game_name;
+    questionTimeEl.value = String(draft.question_time);
+    displayTitleEl.value = draft.visual_config.display_title;
+    displayThemeEl.value = draft.visual_config.theme;
+    teamCountEl.value = String(draft.team_count);
+    renderTeamRows();
+    renderDetectedControls();
+    setMessage("Formulario restablecido.", "info");
+  });
+}
 
 uploadQuestionsBtnEl.addEventListener("click", async () => {
   await uploadQuestionsFile();

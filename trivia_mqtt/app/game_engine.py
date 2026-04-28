@@ -399,6 +399,28 @@ class GameEngine:
         updated_team = app_state.apply_correct_answer(current_team.team_id, points_to_add)
         app_state.reveal_correct_answer(current_question.correct_answer)
         app_state.finish_question()
+        
+        teams = list(app_state._game_config.teams) if app_state._game_config else []
+        question_time = app_state._game_config.question_time if app_state._game_config else 20
+        press_history = app_state.press_history()
+        pressed_team_ids = {press.team_id for press in press_history if press.question_id == current_question.question_id}
+        
+        for team in teams:
+            if team.team_id not in pressed_team_ids:
+                press_order = len(app_state.press_history()) + 1
+                press_record = PressRecord(
+                    question_id=current_question.question_id,
+                    question_text=current_question.text,
+                    team_id=team.team_id,
+                    team_name=team.name,
+                    control_id=team.control_id,
+                    elapsed_time=round(float(question_time), 2),
+                    press_order=press_order,
+                    timestamp=datetime.now(timezone.utc)
+                )
+                app_state.add_press_record(press_record)
+                self._persist_press_record(press_record)
+        
         await self._cancel_timer()
 
         press_elapsed = 0.0
@@ -542,6 +564,27 @@ class GameEngine:
         await self._cancel_timer()
         await self._send_led_all_assigned("on")
         app_state.reveal_correct_answer(current_question.correct_answer)
+        
+        teams = list(app_state._game_config.teams) if app_state._game_config else []
+        question_time = app_state._game_config.question_time if app_state._game_config else 20
+        press_history = app_state.press_history()
+        pressed_team_ids = {press.team_id for press in press_history if press.question_id == current_question.question_id}
+        
+        for team in teams:
+            if team.team_id not in pressed_team_ids:
+                press_order = len(app_state.press_history()) + 1
+                press_record = PressRecord(
+                    question_id=current_question.question_id,
+                    question_text=current_question.text,
+                    team_id=team.team_id,
+                    team_name=team.name,
+                    control_id=team.control_id,
+                    elapsed_time=round(float(question_time), 2),
+                    press_order=press_order,
+                    timestamp=datetime.now(timezone.utc)
+                )
+                app_state.add_press_record(press_record)
+                self._persist_press_record(press_record)
 
         question_record = QuestionRecord(
             question_id=current_question.question_id,
@@ -865,6 +908,28 @@ class GameEngine:
 
             app_state.reveal_correct_answer(current_question.correct_answer)
             app_state.finish_question()
+            
+            teams = list(app_state._game_config.teams) if app_state._game_config else []
+            question_time = app_state._game_config.question_time if app_state._game_config else 20
+            press_history = app_state.press_history()
+            pressed_team_ids = {press.team_id for press in press_history if press.question_id == current_question.question_id}
+            
+            for team in teams:
+                if team.team_id not in pressed_team_ids:
+                    press_order = len(app_state.press_history()) + 1
+                    press_record = PressRecord(
+                        question_id=current_question.question_id,
+                        question_text=current_question.text,
+                        team_id=team.team_id,
+                        team_name=team.name,
+                        control_id=team.control_id,
+                        elapsed_time=round(float(question_time), 2),
+                        press_order=press_order,
+                        timestamp=datetime.now(timezone.utc)
+                    )
+                    app_state.add_press_record(press_record)
+                    self._persist_press_record(press_record)
+            
             question_record = QuestionRecord(
                 question_id=current_question.question_id,
                 question_text=current_question.text,

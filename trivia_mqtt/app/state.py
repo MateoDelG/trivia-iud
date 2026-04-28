@@ -453,6 +453,18 @@ class AppState:
                         break
             press_queue = [press.model_copy(deep=True) for press in self._press_queue]
             teams = [team.model_copy(deep=True) for team in (self._game_config.teams if self._game_config else [])]
+            
+            press_history = list(self._press_history)
+            press_times_by_team: Dict[str, List[float]] = {}
+            for press in press_history:
+                if press.team_id not in press_times_by_team:
+                    press_times_by_team[press.team_id] = []
+                press_times_by_team[press.team_id].append(press.elapsed_time)
+            
+            for team in teams:
+                times = press_times_by_team.get(team.team_id, [])
+                team.average_press_time = round(sum(times) / len(times), 2) if times else 0.0
+                team.total_response_time = round(sum(times), 2) if times else 0.0
 
             ranking = sorted(teams, key=lambda item: (-item.score, item.name.lower()))
 
@@ -598,6 +610,7 @@ class AppState:
         for idx, team in enumerate(teams):
             times = press_times_by_team.get(team.team_id, [])
             avg_time = sum(times) / len(times) if times else 0.0
+            total_time = sum(times) if times else 0.0
 
             results.append(TeamResult(
                 position=idx + 1,
@@ -608,10 +621,11 @@ class AppState:
                 correct_answers=team.correct_answers,
                 incorrect_answers=team.incorrect_answers,
                 total_presses=team.total_presses,
-                average_press_time=round(avg_time, 2)
+                average_press_time=round(avg_time, 2),
+                total_response_time=round(total_time, 2)
             ))
 
-        results.sort(key=lambda x: (-x.score, -x.correct_answers, x.incorrect_answers, x.average_press_time))
+        results.sort(key=lambda x: (-x.score, -x.correct_answers, x.incorrect_answers, x.total_response_time))
         for idx, r in enumerate(results):
             r.position = idx + 1
 

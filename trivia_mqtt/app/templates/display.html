@@ -9,39 +9,16 @@
   </head>
   <body class="display-page">
     <div class="display-shell display-app" data-theme="dark">
-      <header class="display-navbar">
-        <div class="display-brand">
-          <span class="display-brand-icon" aria-hidden="true">TM</span>
-          <span>TriviaMQTT Display</span>
-        </div>
-        <nav class="display-nav-links" aria-label="Navegacion principal">
-          <a class="nav-link" href="/setup">Configuracion</a>
-          <a class="nav-link" href="/host">Host</a>
-          <a class="nav-link nav-link-active" href="/display" aria-current="page">Display</a>
-          <a class="nav-link" href="/results">Resultados</a>
-          <a class="nav-link" href="/history">Historial</a>
-        </nav>
-      </header>
-
       <main class="display-container display-main">
         <section class="display-hero fade-in glow-border">
           <div class="hero-left">
-            <div class="hero-icon" aria-hidden="true">Q</div>
+            <div class="hero-icon" aria-hidden="true"><span class="bolt-icon">🎮</span></div>
             <div>
-              <p id="display-event-name" class="display-event">Evento en vivo</p>
               <h1 id="display-game-name" class="hero-title">TriviaMQTT</h1>
               <div class="hero-pills">
-                <span id="display-status-pill" class="status-pill status-pill-active">Pregunta activa</span>
                 <span id="display-question-progress-pill" class="status-pill">Pregunta - de -</span>
               </div>
-              <p id="display-status" class="hero-subline">Esperando inicio de partida</p>
             </div>
-          </div>
-          <div class="hero-right">
-            <button id="sound-toggle-btn" class="sound-toggle" type="button">
-              <span class="sound-icon" aria-hidden="true">SND</span>
-              <span>Sonido: OFF</span>
-            </button>
           </div>
         </section>
 
@@ -52,10 +29,6 @@
 
         <section id="game-stage" class="game-stage hidden">
           <section class="question-show-card slide-up">
-            <div class="question-header">
-              <span id="display-question-index" class="question-label">Pregunta -/-</span>
-              <div id="display-question-meta" class="question-meta"></div>
-            </div>
             <h2 id="display-question-text" class="question-title">Esperando pregunta...</h2>
           </section>
 
@@ -68,8 +41,7 @@
               <div class="timer-progress" aria-hidden="true">
                 <div id="display-timer-progress" class="timer-progress-fill"></div>
               </div>
-              <p id="display-timer-caption" class="timer-status">Tiempo en curso</p>
-              <p id="display-current-team" class="current-team waiting-team">Responde: esperando pulsacion</p>
+              <p id="display-current-team" class="current-team waiting-team">Responde: esperando pulsación</p>
             </article>
 
             <article class="ranking-card bottom-card">
@@ -93,6 +65,7 @@
           <div id="display-final-ranking" class="final-ranking"></div>
         </section>
 
+        <div id="display-popup-backdrop" class="display-popup-backdrop hidden"></div>
         <div id="display-popup" class="display-popup hidden" role="status" aria-live="polite">
           <div id="display-popup-content" class="display-popup-content">Mensaje</div>
         </div>
