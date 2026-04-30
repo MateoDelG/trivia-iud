@@ -56,7 +56,7 @@ def main() -> int:
     def publish_status_loop() -> None:
         while not stop_event.is_set():
             client.publish(status_topic, online_payload, qos=0, retain=False)
-            time.sleep(2)
+            time.sleep(0.5)  # Publicar cada 500ms
 
     status_thread = threading.Thread(target=publish_status_loop, daemon=True)
     status_thread.start()

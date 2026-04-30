@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>TriviaMQTT - Display</title>
+    <link rel="stylesheet" href="/static/css/theme.css" />
+    <link rel="stylesheet" href="/static/css/display.css" />
+  </head>
+  <body class="display-page">
+    <div class="display-shell display-app" data-theme="dark">
+      <main class="display-container display-main">
+        <section class="display-hero fade-in glow-border">
+          <div class="hero-left">
+            <div class="hero-icon" aria-hidden="true"><span class="bolt-icon">🎮</span></div>
+            <div>
+              <h1 id="display-game-name" class="hero-title">TriviaMQTT</h1>
+              <div class="hero-pills">
+                <span id="display-question-progress-pill" class="status-pill">Pregunta - de -</span>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section id="waiting-stage" class="stage-panel slide-up">
+          <h2 id="waiting-message">Esperando inicio de partida</h2>
+          <p>El host iniciara la partida cuando todo este listo.</p>
+        </section>
+
+        <section id="game-stage" class="game-stage hidden">
+          <section class="question-show-card slide-up">
+            <h2 id="display-question-text" class="question-title">Esperando pregunta...</h2>
+          </section>
+
+          <section id="display-options" class="options-grid"></section>
+
+          <section class="display-bottom-grid bottom-grid">
+            <article id="timer-card" class="timer-card bottom-card">
+              <h3 class="card-title">Tiempo restante</h3>
+              <div id="display-timer" class="timer-value">--</div>
+              <div class="timer-progress" aria-hidden="true">
+                <div id="display-timer-progress" class="timer-progress-fill"></div>
+              </div>
+              <p id="display-current-team" class="current-team waiting-team">Responde: esperando pulsación</p>
+            </article>
+
+            <article class="ranking-card bottom-card">
+              <h3 class="card-title">Ranking en vivo</h3>
+              <div id="display-ranking" class="ranking-list">Sin puntajes aun.</div>
+            </article>
+
+            <article class="queue-card bottom-card">
+              <h3 class="card-title">Cola de pulsaciones</h3>
+              <div id="display-response-times" class="queue-list">Sin pulsaciones registradas.</div>
+            </article>
+          </section>
+        </section>
+
+        <section id="final-stage" class="final-screen hidden">
+          <article class="winner-card">
+            <p class="final-kicker">Partida finalizada</p>
+            <h2 id="display-winner">Equipo ganador: -</h2>
+            <p class="final-message">Gracias por jugar TriviaMQTT.</p>
+          </article>
+          <div id="display-final-ranking" class="final-ranking"></div>
+        </section>
+
+        <div id="display-popup-backdrop" class="display-popup-backdrop hidden"></div>
+        <div id="display-popup" class="display-popup hidden" role="status" aria-live="polite">
+          <div id="display-popup-content" class="display-popup-content">Mensaje</div>
+        </div>
+      </main>
+    </div>
+
+    <script src="/static/js/display.js"></script>
+  </body>
+</html>

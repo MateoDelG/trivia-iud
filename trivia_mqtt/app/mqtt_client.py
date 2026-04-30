@@ -5,6 +5,7 @@ All MQTT reads/writes stay in this module.
 
 import asyncio
 import json
+import time
 from datetime import datetime, timezone
 from typing import Any, Dict, Optional
 
@@ -28,11 +29,25 @@ class MQTTClientService:
         self._loop = loop
 
     def start(self) -> None:
-        self._client.connect(
-            host=config.MQTT_BROKER_HOST,
-            port=config.MQTT_BROKER_PORT,
-            keepalive=config.MQTT_KEEPALIVE_SECONDS,
-        )
+        last_error: Exception | None = None
+        for attempt in range(1, 11):
+            try:
+                self._client.connect(
+                    host=config.MQTT_BROKER_HOST,
+                    port=config.MQTT_BROKER_PORT,
+                    keepalive=config.MQTT_KEEPALIVE_SECONDS,
+                )
+                break
+            except Exception as exc:
+                last_error = exc
+                if attempt < 10:
+                    time.sleep(0.5)
+                else:
+                    raise RuntimeError(
+                        "No se pudo conectar al broker MQTT en "
+                        f"{config.MQTT_BROKER_HOST}:{config.MQTT_BROKER_PORT}. "
+                        "Verifica si el puerto 1883 esta ocupado."
+                    ) from last_error
         self._client.loop_start()
 
     def stop(self) -> None:

@@ -78,7 +78,8 @@ class GameEngine:
                 "correct_answers": team.correct_answers,
                 "incorrect_answers": team.incorrect_answers,
                 "total_presses": team.total_presses,
-                "average_press_time": 0.0,
+                "total_response_time": team.total_response_time,
+                "average_press_time": team.average_press_time,
             }
             for index, team in enumerate(sorted_teams)
         ]

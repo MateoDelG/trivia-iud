@@ -1,6 +1,7 @@
 """FastAPI entrypoint for TriviaMQTT v1."""
 
 import asyncio
+import json
 import tempfile
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
@@ -14,8 +15,11 @@ from fastapi.templating import Jinja2Templates
 from openpyxl import Workbook
 from pydantic import BaseModel
 
+from app import config
 from app.database import DB_PATH, delete_game, export_game_xlsx, get_game_detail, init_db, list_games
+from app.embedded_broker import embedded_broker_service
 from app.game_engine import game_engine
+from app.mdns_service import mdns_service
 from app.models import EventRecord, GameConfig, LedCommandRequest, QuestionModeRequest, Team
 from app.mqtt_client import mqtt_service
 from app.question_loader import SUPPORTED_EXTENSIONS, load_questions_from_file
@@ -93,7 +97,11 @@ async def _presence_watchdog() -> None:
                     reason = f"Control desconectado durante la pregunta: {device_id}"
                     await game_engine.pause_game(reason=reason, source="auto_disconnect")
             
-            if device_id in previous_online_controls:
+            # Solo mostrar popup si el control está asignado a un equipo
+            teams = app_state.teams()
+            assigned_controls = {team.control_id for team in teams if team.is_active}
+            if device_id in previous_online_controls and device_id in assigned_controls:
+                team_name = next((t.name for t in teams if t.control_id == device_id), device_id)
                 popup_message = {
                     "type": "event_received", 
                     "data": {
@@ -122,6 +130,10 @@ async def _presence_watchdog() -> None:
 async def lifespan(app: FastAPI):
     init_db()
     print(f"[db] SQLite ready: {DB_PATH}")
+    if config.USE_EMBEDDED_BROKER:
+        await embedded_broker_service.start()
+        print(f"[mqtt] Embedded broker ready on {config.MQTT_BROKER_BIND_HOST}:{config.MQTT_BROKER_PORT}")
+    mdns_service.start()
     mqtt_service.set_loop(asyncio.get_running_loop())
     game_engine.set_loop(asyncio.get_running_loop())
     game_engine.set_led_sender(mqtt_service.publish_led_command)
@@ -136,6 +148,9 @@ async def lifespan(app: FastAPI):
         except asyncio.CancelledError:
             pass
         mqtt_service.stop()
+        mdns_service.stop()
+        if config.USE_EMBEDDED_BROKER:
+            await embedded_broker_service.stop()
 
 
 app = FastAPI(title="TriviaMQTT", lifespan=lifespan)
@@ -727,6 +742,11 @@ def _build_csv_response(rows: list[dict], filename: str) -> StreamingResponse:
 
 
 def _build_xlsx_bytes(sheets: dict[str, list[dict]]) -> bytes:
+    def _excel_safe(value):
+        if isinstance(value, (dict, list, tuple, set)):
+            return json.dumps(value, ensure_ascii=False)
+        return value
+
     wb = Workbook()
     first_sheet = True
 
@@ -742,7 +762,7 @@ def _build_xlsx_bytes(sheets: dict[str, list[dict]]) -> bytes:
         headers = list(rows[0].keys())
         ws.append(headers)
         for row in rows:
-            ws.append([row.get(header) for header in headers])
+            ws.append([_excel_safe(row.get(header)) for header in headers])
 
     stream = BytesIO()
     wb.save(stream)
@@ -763,7 +783,6 @@ async def export_full_xlsx():
     questions = app_state.question_history()
     answers = app_state.answer_history()
     presses = app_state.press_history()
-    events = app_state.events()
 
     summary = {
         "game_name": app_state.game_config().game_name if app_state.game_config() else None,
@@ -781,7 +800,6 @@ async def export_full_xlsx():
             "Preguntas": [q.model_dump(mode="json") for q in questions],
             "Respuestas": [a.model_dump(mode="json") for a in answers],
             "Pulsaciones": [p.model_dump(mode="json") for p in presses],
-            "Eventos": [e.model_dump(mode="json") for e in events],
         }
     )
 
@@ -818,6 +836,5 @@ async def export_presses_csv():
 
 @app.get("/api/results/export/events.csv")
 async def export_events_csv():
-    events = app_state.events()
-    rows = [e.model_dump() for e in events]
-    return _build_csv_response(rows, "trivia_events.csv")
+    # Eventos excluidos de exportación por requerimiento.
+    return _build_csv_response([], "trivia_events.csv")

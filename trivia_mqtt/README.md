@@ -32,28 +32,23 @@ Desde `trivia_mqtt/`:
 pip install -r requirements.txt
 ```
 
-## 2) Ejecutar Mosquitto local
-
-Si ya tienes Mosquitto instalado:
-
-```powershell
-mosquitto -v
-```
-
-Debe quedar escuchando en `localhost:1883`.
-
-## 3) Ejecutar el servidor
+## 2) Ejecutar servidor completo (broker embebido + API)
 
 Desde `trivia_mqtt/`:
 
 ```powershell
-uvicorn app.main:app --reload
+python launcher.py
 ```
 
 Abre en navegador:
 
-- `http://127.0.0.1:8000/setup`
+- `http://127.0.0.1:8000/setup` (apertura automatica)
 - `http://127.0.0.1:8000/host`
+
+Notas:
+
+- Ya no necesitas levantar Mosquitto manualmente para uso local.
+- Si quieres usar broker externo, cambia `USE_EMBEDDED_BROKER = False` en `app/config.py`.
 
 ## 3.1) Configurar partida en /setup
 
@@ -150,14 +145,13 @@ id,pregunta,opcion_a,opcion_b,opcion_c,opcion_d,respuesta_correcta,puntos,catego
 
 ## 9) Flujo de partida (host + display)
 
-1. Ejecutar Mosquitto (`mosquitto -v`).
-2. Ejecutar servidor desde `trivia_mqtt/`:
+1. Ejecutar servidor desde `trivia_mqtt/`:
 
 ```powershell
-uvicorn app.main:app --reload
+python launcher.py
 ```
 
-3. Ejecutar simuladores en terminales separadas:
+2. Ejecutar simuladores en terminales separadas:
 
 ```powershell
 python tools/simulate_control.py control_01
@@ -165,18 +159,30 @@ python tools/simulate_control.py control_02
 python tools/simulate_control.py control_03
 ```
 
-4. Abrir `http://localhost:8000/setup`.
-5. Configurar equipos, cargar preguntas y definir tiempo por pregunta.
-6. Abrir `http://localhost:8000/host`.
-7. Abrir `http://localhost:8000/display` en otra pestaña/pantalla.
-8. En `/host`, usar:
+3. Abrir `http://localhost:8000/setup`.
+4. Configurar equipos, cargar preguntas y definir tiempo por pregunta.
+5. Abrir `http://localhost:8000/host`.
+6. Abrir `http://localhost:8000/display` en otra pestaña/pantalla.
+7. En `/host`, usar:
    - `Iniciar partida`
    - `Iniciar siguiente pregunta`
    - `Iniciar temporizador`
-9. En un simulador, escribir `press`.
-10. Verificar equipo en turno y cola de pulsaciones.
-11. Marcar `correcta` o `incorrecta` desde `/host`.
-12. Verificar ranking y puntajes actualizados en `/host` y `/display`.
+8. En un simulador, escribir `press`.
+9. Verificar equipo en turno y cola de pulsaciones.
+10. Marcar `correcta` o `incorrecta` desde `/host`.
+11. Verificar ranking y puntajes actualizados en `/host` y `/display`.
+
+## 13) Generar ejecutable (.exe)
+
+Desde `trivia_mqtt/`:
+
+```powershell
+python build_exe.py
+```
+
+Salida esperada:
+
+- `dist/TriviaMQTT/TriviaMQTT.exe`
 
 ## 10) Experiencia visual en /display (Mision 7)
 

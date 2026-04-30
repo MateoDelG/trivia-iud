@@ -10,7 +10,9 @@ from typing import Any
 
 from openpyxl import Workbook
 
-DB_PATH = Path(__file__).resolve().parents[1] / "data" / "database" / "trivia.db"
+from app.path_utils import data_dir
+
+DB_PATH = data_dir() / "database" / "trivia.db"
 
 
 def _now_iso() -> str:
@@ -42,8 +44,7 @@ def init_db() -> None:
                 created_at TEXT
             );
 
-            CREATE TABLE IF NOT EXISTS teams (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
+CREATE TABLE IF NOT EXISTS teams (
                 game_uid TEXT,
                 team_id TEXT,
                 team_name TEXT,
@@ -52,7 +53,7 @@ def init_db() -> None:
                 correct_answers INTEGER,
                 incorrect_answers INTEGER,
                 total_presses INTEGER,
-                average_press_time REAL,
+                total_response_time REAL,
                 position INTEGER
             );
 
@@ -132,6 +133,16 @@ def init_db() -> None:
             CREATE UNIQUE INDEX IF NOT EXISTS idx_questions_unique ON questions(game_uid, question_id);
             """
         )
+        team_columns = {
+            row[1]
+            for row in conn.execute("PRAGMA table_info(teams)").fetchall()
+        }
+        if "total_response_time" not in team_columns:
+            conn.execute("ALTER TABLE teams ADD COLUMN total_response_time REAL")
+            if "average_press_time" in team_columns:
+                conn.execute(
+                    "UPDATE teams SET total_response_time = average_press_time WHERE total_response_time IS NULL"
+                )
 
 
 def upsert_game_start(
@@ -177,7 +188,7 @@ def upsert_teams_snapshot(game_uid: str, teams: list[dict[str, Any]]) -> None:
             INSERT INTO teams (
                 game_uid, team_id, team_name, control_id, score,
                 correct_answers, incorrect_answers, total_presses,
-                average_press_time, position
+                total_response_time, position
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             [
@@ -190,7 +201,7 @@ def upsert_teams_snapshot(game_uid: str, teams: list[dict[str, Any]]) -> None:
                     int(team.get("correct_answers", 0) or 0),
                     int(team.get("incorrect_answers", 0) or 0),
                     int(team.get("total_presses", 0) or 0),
-                    float(team.get("average_press_time", 0.0) or 0.0),
+                    float(team.get("total_response_time", 0.0) or 0.0),
                     int(team.get("position", 0) or 0),
                 )
                 for team in teams

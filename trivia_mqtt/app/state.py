@@ -91,7 +91,7 @@ class AppState:
         
         for device_id, control in controls_snapshot:
             age_seconds = (now - control.last_seen).total_seconds()
-            if age_seconds > CONTROL_STALE_SECONDS:
+            if age_seconds > CONTROL_STALE_SECONDS and control.status != "offline":
                 current_game_status = self._game_status
                 teams = self._game_config.teams if self._game_config else []
                 team = next((t for t in teams if t.control_id == device_id), None)
@@ -103,7 +103,12 @@ class AppState:
                     "current_status": control.status,
                 })
                 
-                self._controls.pop(device_id, None)
+                # Marcar offline, no remover
+                self._controls[device_id] = ControlState(
+                    device_id=device_id,
+                    status="offline",
+                    last_seen=control.last_seen,
+                )
         
         return stale_events
 
@@ -495,7 +500,7 @@ class AppState:
                 teams,
                 key=lambda item: (
                     -item.score,
-                    item.total_response_time,
+                    item.total_response_time,  # Usar suma acumulada para desempate
                     -item.correct_answers,
                     item.incorrect_answers,
                     item.name.lower(),
